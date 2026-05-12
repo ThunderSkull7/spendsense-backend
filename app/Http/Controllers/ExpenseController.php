@@ -2,22 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreExpenseRequest;
+use App\Http\Requests\UpdateExpenseRequest;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 
 class ExpenseController extends Controller
 {
-    public function store(Request $request)
+    public function store(StoreExpenseRequest $request)
     {
-        $expense = Expense::create([           
-            'title' => $request->title,
-            'amount' => $request->amount,
-            'category' => $request->category,
-            'description' => $request->description,
-            'expense_date' => $request->expense_date
-        ]);
+        $expense = Expense::create($request->validated());
 
-        return response()->json($expense);
+        return response()->json([
+            'message' => 'Expense created successfully',
+            'data' => $expense
+        ], 201);
     }
 
     public function index()
@@ -26,12 +25,14 @@ class ExpenseController extends Controller
         return response()->json($expenses);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateExpenseRequest $request, Expense $expense)
     {
-        $expense = Expense::findOrFail($id);
-        $expense->update($request->all());
+        $expense->update($request->validated());
 
-        return response()->json($expense);
+        return response()->json([
+            'message' => 'Expense updated successfully',
+            'data' => $expense
+        ]);
     }
 
     public function destroy($id)
