@@ -17,7 +17,7 @@ return new class extends Migration
 
             $table->foreignId('category_id')
                   ->constrained()
-                  ->onDelete('cascade');
+                  ->onDelete('restrict');
 
             $table->decimal('limit_amount', 10, 2);
 

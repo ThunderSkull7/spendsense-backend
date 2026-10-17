@@ -22,3 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local-only artifacts
+.agents/
+pest-output.txt
+.env.testing

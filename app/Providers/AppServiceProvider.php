@@ -19,6 +19,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Production hardening that must hold even if the environment file is
+        // misconfigured (D8/D17): never leak debug output, and only send the
+        // session/CSRF cookies over HTTPS. Local and testing environments keep
+        // their configured behavior so development is unaffected.
+        if ($this->app->environment('production')) {
+            config([
+                'app.debug' => false,
+                'session.secure' => true,
+            ]);
+        }
     }
 }

@@ -2,15 +2,38 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'title',
+        'user_id',
+        'category_id',
         'amount',
-        'category',
         'description',
-        'expense_date'
+        'expense_date',
     ];
+
+    protected $casts = [
+        'amount'       => 'decimal:2',
+        'expense_date' => 'date',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    public function scopeWhereUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
 }

@@ -41,7 +41,15 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+use App\Models\Category;
+
+function makeExpenseCategory(): Category
 {
-    // ..
+    return Category::create(['name' => fake()->unique()->word() . fake()->unique()->numerify('###'), 'type' => 'expense']);
 }
+
+function makeIncomeCategory(): Category
+{
+    return Category::create(['name' => fake()->unique()->word() . fake()->unique()->numerify('###'), 'type' => 'income']);
+}
+

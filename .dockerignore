@@ -1,0 +1,44 @@
+# Build context: backend/ (see Dockerfile)
+# Everything here is excluded from the image; dependencies and caches are
+# rebuilt inside it.
+
+# ---- Secrets & local environment ---------------------------------------------
+.env
+.env.*
+docker-compose.yml
+docker-compose.*.yml
+
+# ---- VCS / editors ------------------------------------------------------------
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+.editorconfig
+
+# ---- Dependencies & build output (rebuilt in the image) -----------------------
+vendor/
+node_modules/
+public/build/
+
+# ---- Local state, caches & logs (regenerated in the image / at boot) ----------
+bootstrap/cache/*.php
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+database/database.sqlite
+
+# ---- Tests & local tooling (not part of the runtime image) --------------------
+tests/
+phpunit.xml
+.phpunit.result.cache
+pest-output.txt
+boost.json
+
+# ---- Local reports (developer notes, not application files) -------------------
+BROWSER_TESTING_CHECKLIST.md
+INTEGRATION_AUDIT_REPORT.md
+PROJECT_PROGRESS.md
+TEST_SUMMARY.md

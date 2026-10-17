@@ -10,24 +10,12 @@ return new class extends Migration
     {
         Schema::create('expenses', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('user_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-
-            $table->foreignId('category_id')
-                  ->constrained()
-                  ->onDelete('cascade');
-
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('category_id')->constrained()->onDelete('restrict');
             $table->decimal('amount', 10, 2);
-
-            $table->string('description');
-
+            $table->text('description')->nullable();
             $table->date('expense_date');
-
             $table->timestamps();
-
-            // Indexes
             $table->index('user_id');
             $table->index('category_id');
             $table->index('expense_date');

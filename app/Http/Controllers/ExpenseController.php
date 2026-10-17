@@ -4,42 +4,97 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreExpenseRequest;
 use App\Http\Requests\UpdateExpenseRequest;
+use App\Models\Category;
 use App\Models\Expense;
-use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class ExpenseController extends Controller
 {
-    public function store(StoreExpenseRequest $request)
+    public function index(): JsonResponse
     {
-        $expense = Expense::create($request->validated());
+        $expenses = Expense::with('category')
+            ->whereUser(auth()->id())
+            ->orderByDesc('expense_date')
+            ->paginate(15);
 
         return response()->json([
-            'message' => 'Expense created successfully',
-            'data' => $expense
-        ], 201);
-    }
-
-    public function index()
-    {
-        $expenses = Expense::all();
-        return response()->json($expenses);
-    }
-
-    public function update(UpdateExpenseRequest $request, Expense $expense)
-    {
-        $expense->update($request->validated());
-
-        return response()->json([
-            'message' => 'Expense updated successfully',
-            'data' => $expense
+            'success' => true,
+            'data'    => $expenses,
         ]);
     }
 
-    public function destroy($id)
+    public function store(StoreExpenseRequest $request): JsonResponse
     {
-        $expense = Expense::findOrFail($id);
+        $validated = $request->validated();
+
+        $category = Category::findOrFail($validated['category_id']);
+        if ($category->type !== 'expense') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Category must be of type expense.',
+            ], 422);
+        }
+
+        $expense = Expense::create([
+            'user_id'      => auth()->id(),
+            'category_id'  => $validated['category_id'],
+            'amount'       => $validated['amount'],
+            'description'  => $validated['description'] ?? null,
+            'expense_date' => $validated['expense_date'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $expense->load('category'),
+        ], 201);
+    }
+
+    public function show(Expense $expense): JsonResponse
+    {
+        if ($expense->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Forbidden.'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $expense->load('category'),
+        ]);
+    }
+
+    public function update(UpdateExpenseRequest $request, Expense $expense): JsonResponse
+    {
+        if ($expense->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Forbidden.'], 403);
+        }
+
+        $validated = $request->validated();
+
+        if (isset($validated['category_id'])) {
+            $category = Category::findOrFail($validated['category_id']);
+            if ($category->type !== 'expense') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Category must be of type expense.',
+                ], 422);
+            }
+        }
+
+        $expense->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $expense->fresh()->load('category'),
+        ]);
+    }
+
+    public function destroy(Expense $expense): JsonResponse
+    {
+        if ($expense->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Forbidden.'], 403);
+        }
+
         $expense->delete();
 
-        return response()->json(['message' => 'Expense deleted successfully']);
+        return response()->json(null, 204);
     }
 }

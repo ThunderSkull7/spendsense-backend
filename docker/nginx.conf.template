@@ -1,0 +1,43 @@
+# SpendSense backend - Nginx site template.
+# Rendered at container start by docker/entrypoint.sh: envsubst replaces
+# ${PORT} with the platform-provided port (Render defaults to 10000).
+# All other $names below are Nginx variables and are passed through untouched.
+
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /var/www/html/public;
+    index index.php;
+
+    charset utf-8;
+    client_max_body_size 10m;
+
+    # Platform log capture: keep access/error logs on stdout/stderr.
+    access_log /dev/stdout;
+    error_log  /dev/stderr;
+
+    add_header X-Content-Type-Options nosniff always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_read_timeout 60s;
+    }
+
+    # Deny hidden files (except ACME challenges).
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
