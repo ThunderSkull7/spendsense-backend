@@ -225,8 +225,9 @@ test('income creation ignores payload fields outside the API contract', function
         'source'      => 'Regression Salary',
         'income_date' => '2025-01-15',
         'category_id' => 1,
-        'frequency'   => 'Monthly',
-        'notes'       => 'ignored by contract',
+        'recurring'   => true,
+        'schedule'    => 'Monthly',
+        'user_id'     => $user->id + 999,
     ]);
 
     $response->assertStatus(201)->assertJsonPath('success', true);

@@ -231,3 +231,113 @@ test('delete returns 404 for non-existent income', function () {
         ->deleteJson('/api/incomes/99999')
         ->assertStatus(404);
 });
+
+// ----------- frequency & notes -----------
+
+test('store persists frequency and notes when provided', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/incomes', array_merge(validIncomePayload(), [
+            'frequency' => 'monthly',
+            'notes'     => 'October salary',
+        ]));
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.frequency', 'monthly')
+        ->assertJsonPath('data.notes', 'October salary');
+
+    $this->assertDatabaseHas('incomes', [
+        'user_id'   => $user->id,
+        'frequency' => 'monthly',
+        'notes'     => 'October salary',
+    ]);
+});
+
+test('store normalizes legacy frequency labels to contract slugs', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/incomes', array_merge(validIncomePayload(), ['frequency' => 'Monthly']))
+        ->assertStatus(201)
+        ->assertJsonPath('data.frequency', 'monthly');
+
+    $this->actingAs($user)
+        ->postJson('/api/incomes', array_merge(validIncomePayload(), ['frequency' => 'One-time']))
+        ->assertStatus(201)
+        ->assertJsonPath('data.frequency', 'one-time');
+});
+
+test('store defaults frequency and notes to null when omitted', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/incomes', validIncomePayload())
+        ->assertStatus(201);
+
+    $income = Income::where('user_id', $user->id)->first();
+    expect($income->frequency)->toBeNull();
+    expect($income->notes)->toBeNull();
+});
+
+test('store rejects an unsupported frequency', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/incomes', array_merge(validIncomePayload(), ['frequency' => 'fortnightly']))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['frequency']);
+});
+
+test('store rejects notes longer than 1000 characters', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/incomes', array_merge(validIncomePayload(), ['notes' => str_repeat('a', 1001)]))
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['notes']);
+});
+
+test('owner can update frequency and notes', function () {
+    $user = User::factory()->create();
+    $income = Income::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->putJson("/api/incomes/{$income->id}", ['frequency' => 'yearly', 'notes' => 'Annual bonus'])
+        ->assertStatus(200)
+        ->assertJsonPath('data.frequency', 'yearly')
+        ->assertJsonPath('data.notes', 'Annual bonus');
+
+    $this->assertDatabaseHas('incomes', [
+        'id'        => $income->id,
+        'frequency' => 'yearly',
+        'notes'     => 'Annual bonus',
+    ]);
+});
+
+test('update rejects an unsupported frequency', function () {
+    $user = User::factory()->create();
+    $income = Income::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->putJson("/api/incomes/{$income->id}", ['frequency' => 'sometimes'])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['frequency']);
+});
+
+test('owner can clear frequency and notes by sending null', function () {
+    $user = User::factory()->create();
+    $income = Income::factory()->create([
+        'user_id'   => $user->id,
+        'frequency' => 'monthly',
+        'notes'     => 'temporary note',
+    ]);
+
+    $this->actingAs($user)
+        ->putJson("/api/incomes/{$income->id}", ['frequency' => null, 'notes' => null])
+        ->assertStatus(200);
+
+    $income->refresh();
+    expect($income->frequency)->toBeNull();
+    expect($income->notes)->toBeNull();
+});

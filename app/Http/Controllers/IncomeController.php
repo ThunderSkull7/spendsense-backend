@@ -24,11 +24,15 @@ class IncomeController extends Controller
 
     public function store(StoreIncomeRequest $request): JsonResponse
     {
+        $validated = $request->validated();
+
         $income = Income::create([
             'user_id'    => auth()->id(),
-            'amount'     => $request->validated('amount'),
-            'source'     => $request->validated('source'),
-            'income_date' => $request->validated('income_date'),
+            'amount'     => $validated['amount'],
+            'source'     => $validated['source'],
+            'income_date' => $validated['income_date'],
+            'frequency'  => $validated['frequency'] ?? null,
+            'notes'      => $validated['notes'] ?? null,
         ]);
 
         return response()->json([

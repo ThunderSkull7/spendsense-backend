@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Income;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateIncomeRequest extends FormRequest
 {
@@ -11,12 +13,25 @@ class UpdateIncomeRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        // Accept legacy human labels ("Monthly") and normalize them to the
+        // contract slugs ("monthly") so older clients keep working.
+        if ($this->has('frequency') && is_string($this->input('frequency'))) {
+            $this->merge([
+                'frequency' => str_replace(' ', '-', strtolower(trim($this->input('frequency')))),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
         return [
             'amount'      => 'sometimes|numeric|min:0',
             'source'      => 'sometimes|string|max:255',
             'income_date' => 'sometimes|date',
+            'frequency'   => ['sometimes', 'nullable', 'string', Rule::in(Income::FREQUENCIES)],
+            'notes'       => 'sometimes|nullable|string|max:1000',
         ];
     }
 }

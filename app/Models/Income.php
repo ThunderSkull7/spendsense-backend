@@ -9,11 +9,29 @@ class Income extends Model
 {
     use HasFactory;
 
+    /**
+     * Supported frequency values for an income entry.
+     * "one-time" is the default recorded by the UI; the selector only
+     * describes the income — entries are never generated automatically.
+     */
+    public const FREQUENCIES = [
+        'one-time',
+        'daily',
+        'weekly',
+        'biweekly',
+        'monthly',
+        'quarterly',
+        'half-yearly',
+        'yearly',
+    ];
+
     protected $fillable = [
         'user_id',
         'amount',
         'source',
         'income_date',
+        'frequency',
+        'notes',
     ];
 
     protected $casts = [
