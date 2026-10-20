@@ -20,6 +20,7 @@ class BudgetFactory extends Factory
         return [
             'limit_amount' => $this->faker->randomFloat(2, 50, 5000),
             'month_year'   => $this->faker->date(),
+            'alert_thresholds' => [50, 80, 100],
         ];
     }
 }

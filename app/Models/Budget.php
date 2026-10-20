@@ -14,11 +14,13 @@ class Budget extends Model
         'category_id',
         'limit_amount',
         'month_year',
+        'alert_thresholds',
     ];
 
     protected $casts = [
-        'limit_amount' => 'decimal:2',
-        'month_year'   => 'date',
+        'limit_amount'    => 'decimal:2',
+        'month_year'      => 'date',
+        'alert_thresholds' => 'array',
     ];
 
     public function user()

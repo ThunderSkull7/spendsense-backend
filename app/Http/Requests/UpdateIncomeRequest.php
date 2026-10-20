@@ -27,7 +27,7 @@ class UpdateIncomeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount'      => 'sometimes|numeric|min:0',
+            'amount'      => ['sometimes', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'source'      => 'sometimes|string|max:255',
             'income_date' => 'sometimes|date',
             'frequency'   => ['sometimes', 'nullable', 'string', Rule::in(Income::FREQUENCIES)],

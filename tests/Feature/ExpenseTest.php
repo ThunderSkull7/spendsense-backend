@@ -251,7 +251,7 @@ test('authenticated owner can delete an expense', function () {
         ->deleteJson("/api/expenses/{$expense->id}")
         ->assertStatus(204);
 
-    $this->assertDatabaseMissing('expenses', ['id' => $expense->id]);
+    $this->assertSoftDeleted('expenses', ['id' => $expense->id]);
 });
 
 test('unauthenticated user cannot delete an expense', function () {

@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Income extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Supported frequency values for an income entry.
@@ -42,6 +43,11 @@ class Income extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function recurringOccurrence()
+    {
+        return $this->hasOne(RecurringIncomeOccurrence::class);
     }
 
     public function scopeWhereUser($query, int $userId)

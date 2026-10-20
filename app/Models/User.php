@@ -46,4 +46,29 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function recurringIncomes()
+    {
+        return $this->hasMany(RecurringIncome::class);
+    }
+
+    public function recurringExpenses()
+    {
+        return $this->hasMany(RecurringExpense::class);
+    }
+
+    public function billReminders()
+    {
+        return $this->hasMany(BillReminder::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function netWorthEntries()
+    {
+        return $this->hasMany(NetWorthEntry::class);
+    }
 }

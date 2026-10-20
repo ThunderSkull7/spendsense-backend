@@ -204,7 +204,7 @@ test('authenticated owner can delete an income', function () {
         ->deleteJson("/api/incomes/{$income->id}")
         ->assertStatus(204);
 
-    $this->assertDatabaseMissing('incomes', ['id' => $income->id]);
+    $this->assertSoftDeleted('incomes', ['id' => $income->id]);
 });
 
 test('unauthenticated user cannot delete an income', function () {

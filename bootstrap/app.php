@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureIdempotentRequest;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,6 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // configured stateful domain, this starts the session and applies CSRF
         // protection, so auth cookies persist across separate requests.
         $middleware->statefulApi();
+
+        $middleware->alias([
+            'idempotent' => EnsureIdempotentRequest::class,
+        ]);
 
         // This backend is a JSON API. Never redirect guests to a web "login"
         // route (which does not exist). Unauthenticated requests are rendered

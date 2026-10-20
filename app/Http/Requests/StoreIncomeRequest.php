@@ -27,7 +27,7 @@ class StoreIncomeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount'      => 'required|numeric|min:0',
+            'amount'      => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'source'      => 'required|string|max:255',
             'income_date' => 'required|date',
             'frequency'   => ['nullable', 'string', Rule::in(Income::FREQUENCIES)],

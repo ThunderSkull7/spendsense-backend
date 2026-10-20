@@ -20,4 +20,14 @@ class Category extends Model
     {
         return $this->hasMany(Budget::class);
     }
+
+    public function recurringExpenses()
+    {
+        return $this->hasMany(RecurringExpense::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class);
+    }
 }

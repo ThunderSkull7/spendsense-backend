@@ -23,6 +23,21 @@ class ExpenseController extends Controller
         ]);
     }
 
+    public function trash(): JsonResponse
+    {
+        $expenses = Expense::onlyTrashed()
+            ->with('category')
+            ->whereUser(auth()->id())
+            ->orderByDesc('deleted_at')
+            ->orderByDesc('id')
+            ->paginate(15);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $expenses,
+        ]);
+    }
+
     public function store(StoreExpenseRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -96,5 +111,19 @@ class ExpenseController extends Controller
         $expense->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function restore(int $expense): JsonResponse
+    {
+        $expense = Expense::onlyTrashed()
+            ->whereUser(auth()->id())
+            ->findOrFail($expense);
+
+        $expense->restore();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $expense->fresh()->load('category'),
+        ]);
     }
 }

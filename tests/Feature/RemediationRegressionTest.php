@@ -153,7 +153,7 @@ test('an expense can be deleted while its category has other dependents', functi
         ->deleteJson("/api/expenses/{$delete->id}")
         ->assertStatus(204);
 
-    $this->assertDatabaseMissing('expenses', ['id' => $delete->id]);
+    $this->assertSoftDeleted('expenses', ['id' => $delete->id]);
     $this->assertDatabaseHas('expenses', ['id' => $keep->id]);
     $this->assertDatabaseHas('categories', ['id' => $category->id]);
     $this->assertDatabaseHas('budgets', ['id' => $budget->id]);
@@ -172,9 +172,16 @@ test('category deletion is blocked at the database level while an expense refere
         'expense_date' => Carbon::now()->toDateString(),
     ]);
 
-    expect(fn () => DB::table('categories')->where('id', $category->id)->delete())
-        ->toThrow(QueryException::class);
+    $blocked = false;
+    try {
+        DB::transaction(function () use ($category) {
+            DB::table('categories')->where('id', $category->id)->delete();
+        });
+    } catch (QueryException $exception) {
+        $blocked = true;
+    }
 
+    expect($blocked)->toBeTrue();
     $this->assertDatabaseHas('categories', ['id' => $category->id]);
 });
 
@@ -183,9 +190,16 @@ test('category deletion is blocked at the database level while a budget referenc
     $category = makeExpenseCategory();
     $budget   = makeBudgetForMonth($user, $category, 100, Carbon::now());
 
-    expect(fn () => DB::table('categories')->where('id', $category->id)->delete())
-        ->toThrow(QueryException::class);
+    $blocked = false;
+    try {
+        DB::transaction(function () use ($category) {
+            DB::table('categories')->where('id', $category->id)->delete();
+        });
+    } catch (QueryException $exception) {
+        $blocked = true;
+    }
 
+    expect($blocked)->toBeTrue();
     $this->assertDatabaseHas('categories', ['id' => $category->id]);
     $this->assertDatabaseHas('budgets', ['id' => $budget->id]);
 });
