@@ -77,7 +77,7 @@ jobs:
           coverage: none
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions.cache@v4
         with:
           path: vendor
           key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
@@ -133,7 +133,6 @@ jobs:
       DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       APP_KEY: ${{ secrets.APP_KEY }}
       APP_ENV: production
-    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -154,7 +153,7 @@ jobs:
         run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
 
       - name: Run scheduled jobs
-        if: env.POSTGRES_HOST && env.POSTGRES_PORT && env.POSTGRES_DB && env.POSTGRES_USER && env.POSTGRES_PASSWORD && env.APP_KEY
+        if: env.DB_HOST && env.DB_PORT && env.DB_DATABASE && env.DB_USERNAME && env.DB_PASSWORD && env.APP_KEY
         run: |
           php artisan model:prune --model=App\\Models\\IdempotencyRecord --force
           php artisan recurring-expenses:sync-reminders

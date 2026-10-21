@@ -56,23 +56,23 @@ jobs:
         run: |
           expected_host="ep-wandering-mode-aoz8aitl.c-2.ap-southeast-1.aws.neon.tech"
           expected_db="neondb"
-          
+
           if [ "$POSTGRES_HOST" != "$expected_host" ]; then
             echo "ERROR: POSTGRES_HOST mismatch. Expected: $expected_host, Got: $POSTGRES_HOST"
             exit 1
           fi
-          
+
           if [ "$POSTGRES_DB" != "$expected_db" ]; then
             echo "ERROR: POSTGRES_DB mismatch. Expected: $expected_db, Got: $POSTGRES_DB"
             exit 1
           fi
-          
+
           # Verify it's a direct host, not pooled
           if [[ "$POSTGRES_HOST" == *"-pooler"* ]]; then
             echo "ERROR: POSTGRES_HOST appears to be a pooled connection. Use direct Neon host."
             exit 1
           fi
-          
+
           echo "Target database validation passed:"
           echo "  Host: $POSTGRES_HOST"
           echo "  Database: $POSTGRES_DB"
@@ -101,54 +101,63 @@ jobs:
         run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
 
       - name: Run preflight checks
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: ${{ secrets.POSTGRES_HOST }}
+          DB_PORT: ${{ secrets.POSTGRES_PORT }}
+          DB_DATABASE: ${{ secrets.POSTGRES_DB }}
+          DB_USERNAME: ${{ secrets.POSTGRES_USER }}
+          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          APP_KEY: ${{ secrets.APP_KEY }}
         run: |
+          set -e
           echo "Running preflight checks..."
-          
+
           # Check for duplicate monthly budget keys
           duplicate_budgets=$(php -r "
             require 'vendor/autoload.php';
             \$app = require_once 'bootstrap/app.php';
             \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
-            
+
             \$duplicates = DB::table('budgets')
-              ->select('user_id', 'category_id', DB::raw('DATE_TRUNC(\"month\", month_year) as month'), DB::raw('COUNT(*) as cnt'))
+              ->select('user_id', 'category_id', DB::raw('DATE_TRUNC(\'month\', month_year) as month'), DB::raw('COUNT(*) as cnt'))
               ->groupBy('user_id', 'category_id', 'month')
               ->havingRaw('COUNT(*) > 1')
               ->count();
-            
+
             if (\$duplicates > 0) {
-              echo \"DUPLICATE_BUDGETS:\$duplicates\";
+              echo 'DUPLICATE_BUDGETS:' . \$duplicates;
               exit(1);
             }
           ")
-          
-          if [[ $duplicate_budgets == *"DUPLICATE_BUDGETS:"* ]]; then
-            count=${duplicate_budgets#*DUPLICATE_BUDGETS:}
-            echo "ERROR: Found $count duplicate monthly budget keys. Aborting migration."
+
+          if [[ \$duplicate_budgets == *"DUPLICATE_BUDGETS:"* ]]; then
+            count=\${duplicate_budgets#*DUPLICATE_BUDGETS:}
+            echo "ERROR: Found \$count duplicate monthly budget keys. Aborting migration."
             exit 1
           fi
-          
+
           # Check for non-positive amounts
           negative_amounts=$(php -r "
             require 'vendor/autoload.php';
             \$app = require_once 'bootstrap/app.php';
             \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
-            
+
             \$neg_incomes = DB::table('incomes')->where('amount', '<=', 0)->count();
             \$neg_expenses = DB::table('expenses')->where('amount', '<=', 0)->count();
             \$neg_budgets = DB::table('budgets')->where('limit_amount', '<=', 0)->count();
-            
+
             if (\$neg_incomes > 0 || \$neg_expenses > 0 || \$neg_budgets > 0) {
-              echo \"NEGATIVE_AMOUNTS: incomes=\$neg_incomes, expenses=\$neg_expenses, budgets=\$neg_budgets\";
+              echo 'NEGATIVE_AMOUNTS: incomes=' . \$neg_incomes . ', expenses=' . \$neg_expenses . ', budgets=' . \$neg_budgets;
               exit(1);
             }
           ")
-          
-          if [[ $negative_amounts == *"NEGATIVE_AMOUNTS:"* ]]; then
-            echo "ERROR: Found non-positive amounts: ${negative_amounts#*NEGATIVE_AMOUNTS:}. Aborting migration."
+
+          if [[ \$negative_amounts == *"NEGATIVE_AMOUNTS:"* ]]; then
+            echo "ERROR: Found non-positive amounts: \${negative_amounts#*NEGATIVE_AMOUNTS:}. Aborting migration."
             exit 1
           fi
-          
+
           echo "Preflight checks passed."
 
       - name: Run migration status (pre-migration)
@@ -166,7 +175,7 @@ jobs:
             require 'vendor/autoload.php';
             \$app = require_once 'bootstrap/app.php';
             \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
-            
+
             \$tables = [
               'recurring_incomes',
               'recurring_income_occurrences',
@@ -182,14 +191,14 @@ jobs:
               'idempotency_records',
               'dashboard_preferences',
             ];
-            
+
             foreach (\$tables as \$table) {
               if (!Schema::hasTable(\$table)) {
-                echo \"MISSING TABLE: \$table\n\";
+                echo 'MISSING TABLE: ' . \$table . \"\n\";
                 exit(1);
               }
             }
-            
+
             // Verify key columns on critical tables
             \$columns = [
               'recurring_expenses' => ['amount', 'frequency', 'status', 'reminder_days_before'],
@@ -199,17 +208,17 @@ jobs:
               'budget_alerts' => ['threshold', 'spent_amount', 'limit_amount'],
               'subscriptions' => ['recurring_expense_id', 'tracking_shape'],
             ];
-            
+
             foreach (\$columns as \$table => \$cols) {
               foreach (\$cols as \$col) {
                 if (!Schema::hasColumn(\$table, \$col)) {
-                  echo \"MISSING COLUMN: \${table}.\${col}\n\";
+                  echo 'MISSING COLUMN: ' . \$table . '.' . \$col . \"\n\";
                   exit(1);
                 }
               }
             }
-            
-            echo \"All feature tables and key columns verified.\"
+
+            echo 'All feature tables and key columns verified.'
           "
 
 concurrency:
