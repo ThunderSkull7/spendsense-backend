@@ -220,7 +220,3 @@ jobs:
 
             echo 'All feature tables and key columns verified.'
           "
-
-concurrency:
-  group: production-migration
-  cancel-in-progress: false
