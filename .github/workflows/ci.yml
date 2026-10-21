@@ -40,8 +40,8 @@ jobs:
           restore-keys: |
             composer-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+      - name: Install dependencies (with dev for tests)
+        run: composer install --prefer-dist --no-progress --optimize-autoloader
 
       - name: Copy test environment
         run: cp .env.example .env.testing || true
@@ -84,8 +84,8 @@ jobs:
           restore-keys: |
             composer-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+      - name: Install dependencies (with dev for tests)
+        run: composer install --prefer-dist --no-progress --optimize-autoloader
 
       - name: Prepare test environment
         run: |
@@ -118,11 +118,21 @@ jobs:
       - name: Backend dependency audit
         run: |
           composer install --no-dev --prefer-dist --no-progress
-          composer audit --no-dev --format=json --no-interaction || true
+          composer audit --no-dev --format=json --no-interaction
 
   scheduled-jobs:
     name: Scheduled Jobs (Daily)
     if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: ${{ secrets.POSTGRES_HOST }}
+      DB_PORT: ${{ secrets.POSTGRES_PORT }}
+      DB_DATABASE: ${{ secrets.POSTGRES_DB }}
+      DB_USERNAME: ${{ secrets.POSTGRES_USER }}
+      DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      APP_KEY: ${{ secrets.APP_KEY }}
+      APP_ENV: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -144,15 +154,7 @@ jobs:
         run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
 
       - name: Run scheduled jobs
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: ${{ secrets.POSTGRES_HOST }}
-          DB_PORT: ${{ secrets.POSTGRES_PORT }}
-          DB_DATABASE: ${{ secrets.POSTGRES_DB }}
-          DB_USERNAME: ${{ secrets.POSTGRES_USER }}
-          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          APP_KEY: ${{ secrets.APP_KEY }}
-          APP_ENV: production
+        if: env.POSTGRES_HOST && env.POSTGRES_PORT && env.POSTGRES_DB && env.POSTGRES_USER && env.POSTGRES_PASSWORD && env.APP_KEY
         run: |
           php artisan model:prune --model=App\\Models\\IdempotencyRecord --force
           php artisan recurring-expenses:sync-reminders
