@@ -37,9 +37,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Verify confirmation input
+        if: github.event.inputs.confirm != 'YES'
+        run: |
+          echo "Migration aborted: confirmation input must be exactly 'YES'."
+          exit 1
+
       - name: Verify required secrets
         run: |
-          required_vars=("POSTGRES_HOST" "POSTGRES_PORT" "POSTGRES_DB" "POSTGRES_USER" "POSTGRES_PASSWORD" "APP_KEY")
+          required_vars=("DB_HOST" "DB_PORT" "DB_DATABASE" "DB_USERNAME" "DB_PASSWORD" "APP_KEY")
           missing=()
           for var in "${required_vars[@]}"; do
             if [ -z "${!var}" ]; then
@@ -47,41 +53,39 @@ jobs:
             fi
           done
           if [ ${#missing[@]} -gt 0 ]; then
-            echo "Missing required secrets: ${missing[*]}"
+            echo "Missing required configuration: ${missing[*]}"
             exit 1
           fi
-          echo "All required secrets present"
+          echo "All required configuration values are present"
 
       - name: Validate target database
         run: |
           expected_host="ep-wandering-mode-aoz8aitl.c-2.ap-southeast-1.aws.neon.tech"
           expected_db="neondb"
+          expected_port="5432"
 
-          if [ "$POSTGRES_HOST" != "$expected_host" ]; then
-            echo "ERROR: POSTGRES_HOST mismatch. Expected: $expected_host, Got: $POSTGRES_HOST"
+          if [ "$DB_HOST" != "$expected_host" ]; then
+            echo "ERROR: DB_HOST does not match the intended direct Neon production host."
             exit 1
           fi
 
-          if [ "$POSTGRES_DB" != "$expected_db" ]; then
-            echo "ERROR: POSTGRES_DB mismatch. Expected: $expected_db, Got: $POSTGRES_DB"
+          if [ "$DB_DATABASE" != "$expected_db" ]; then
+            echo "ERROR: DB_DATABASE does not match the intended production database."
+            exit 1
+          fi
+
+          if [ "$DB_PORT" != "$expected_port" ]; then
+            echo "ERROR: DB_PORT does not match the intended PostgreSQL port."
             exit 1
           fi
 
           # Verify it's a direct host, not pooled
-          if [[ "$POSTGRES_HOST" == *"-pooler"* ]]; then
-            echo "ERROR: POSTGRES_HOST appears to be a pooled connection. Use direct Neon host."
+          if [[ "$DB_HOST" == *"-pooler"* ]]; then
+            echo "ERROR: DB_HOST appears to be a pooled connection. Use the direct Neon host."
             exit 1
           fi
 
-          echo "Target database validation passed:"
-          echo "  Host: $POSTGRES_HOST"
-          echo "  Database: $POSTGRES_DB"
-
-      - name: Verify confirmation input
-        if: github.event.inputs.confirm != 'YES'
-        run: |
-          echo "Migration aborted: confirmation input was not 'YES'"
-          exit 1
+          echo "Target database validation passed."
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -101,16 +105,8 @@ jobs:
         run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
 
       - name: Run preflight checks
-        env:
-          DB_CONNECTION: pgsql
-          DB_HOST: ${{ secrets.POSTGRES_HOST }}
-          DB_PORT: ${{ secrets.POSTGRES_PORT }}
-          DB_DATABASE: ${{ secrets.POSTGRES_DB }}
-          DB_USERNAME: ${{ secrets.POSTGRES_USER }}
-          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          APP_KEY: ${{ secrets.APP_KEY }}
         run: |
-          set -e
+          set -euo pipefail
           echo "Running preflight checks..."
 
           # Check for duplicate monthly budget keys
@@ -120,20 +116,22 @@ jobs:
             \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
             \$duplicates = DB::table('budgets')
-              ->select('user_id', 'category_id', DB::raw('DATE_TRUNC(\'month\', month_year) as month'), DB::raw('COUNT(*) as cnt'))
-              ->groupBy('user_id', 'category_id', 'month')
+              ->select('user_id', 'category_id')
+              ->selectRaw('DATE_TRUNC(\'month\', month_year) as month')
+              ->groupBy('user_id', 'category_id')
+              ->groupByRaw('DATE_TRUNC(\'month\', month_year)')
               ->havingRaw('COUNT(*) > 1')
+              ->get()
               ->count();
 
             if (\$duplicates > 0) {
               echo 'DUPLICATE_BUDGETS:' . \$duplicates;
-              exit(1);
             }
           ")
 
-          if [[ \$duplicate_budgets == *"DUPLICATE_BUDGETS:"* ]]; then
-            count=\${duplicate_budgets#*DUPLICATE_BUDGETS:}
-            echo "ERROR: Found \$count duplicate monthly budget keys. Aborting migration."
+          if [[ "$duplicate_budgets" == *"DUPLICATE_BUDGETS:"* ]]; then
+            count="${duplicate_budgets#*DUPLICATE_BUDGETS:}"
+            echo "ERROR: Found $count duplicate monthly budget keys. Aborting migration."
             exit 1
           fi
 
@@ -148,13 +146,12 @@ jobs:
             \$neg_budgets = DB::table('budgets')->where('limit_amount', '<=', 0)->count();
 
             if (\$neg_incomes > 0 || \$neg_expenses > 0 || \$neg_budgets > 0) {
-              echo 'NEGATIVE_AMOUNTS: incomes=' . \$neg_incomes . ', expenses=' . \$neg_expenses . ', budgets=' . \$neg_budgets;
-              exit(1);
+              echo 'NEGATIVE_AMOUNTS:incomes=' . \$neg_incomes . ', expenses=' . \$neg_expenses . ', budgets=' . \$neg_budgets;
             }
           ")
 
-          if [[ \$negative_amounts == *"NEGATIVE_AMOUNTS:"* ]]; then
-            echo "ERROR: Found non-positive amounts: \${negative_amounts#*NEGATIVE_AMOUNTS:}. Aborting migration."
+          if [[ "$negative_amounts" == *"NEGATIVE_AMOUNTS:"* ]]; then
+            echo "ERROR: Found non-positive amounts: ${negative_amounts#*NEGATIVE_AMOUNTS:}. Aborting migration."
             exit 1
           fi
 
@@ -171,6 +168,7 @@ jobs:
 
       - name: Verify expected feature tables exist
         run: |
+          set -euo pipefail
           php -r "
             require 'vendor/autoload.php';
             \$app = require_once 'bootstrap/app.php';
@@ -206,7 +204,7 @@ jobs:
               'savings_goals' => ['target_amount', 'status', 'completed_at'],
               'savings_goal_contributions' => ['type', 'amount'],
               'budget_alerts' => ['threshold', 'spent_amount', 'limit_amount'],
-              'subscriptions' => ['recurring_expense_id', 'tracking_shape'],
+              'subscriptions' => ['recurring_expense_id', 'amount', 'frequency', 'next_renewal_date'],
             ];
 
             foreach (\$columns as \$table => \$cols) {
@@ -218,5 +216,5 @@ jobs:
               }
             }
 
-            echo 'All feature tables and key columns verified.'
+            echo 'All feature tables and key columns verified.';
           "
