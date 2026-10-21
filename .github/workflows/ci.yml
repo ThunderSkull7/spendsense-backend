@@ -1,0 +1,162 @@
+name: Backend CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run daily at 03:00 UTC to verify PostgreSQL constraints and scheduled jobs
+    - cron: '0 3 * * *'
+
+env:
+  DB_CONNECTION: pgsql
+  DB_HOST: 127.0.0.1
+  DB_PORT: 5432
+  DB_DATABASE: spendsense_test
+  DB_USERNAME: postgres
+  DB_PASSWORD: postgres
+
+jobs:
+  backend-tests-sqlite:
+    name: Backend Tests (SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, bcmath, xml, curl, zip
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Copy test environment
+        run: cp .env.example .env.testing || true
+
+      - name: Run SQLite tests
+        run: php vendor/bin/pest --colors=never
+
+  backend-tests-postgres:
+    name: Backend Tests (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: spendsense_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, bcmath, xml, curl, zip
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Prepare test environment
+        run: |
+          cp .env.example .env.testing
+          sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env.testing
+          sed -i 's/# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env.testing
+          sed -i 's/# DB_PORT=3306/DB_PORT=5432/' .env.testing
+          sed -i 's/# DB_DATABASE=laravel/DB_DATABASE=spendsense_test/' .env.testing
+          sed -i 's/# DB_USERNAME=root/DB_USERNAME=postgres/' .env.testing
+          sed -i 's/# DB_PASSWORD=/DB_PASSWORD=postgres/' .env.testing
+
+      - name: Run migrations
+        run: php artisan migrate --force --database=pgsql
+
+      - name: Run PostgreSQL tests
+        run: php vendor/bin/pest --colors=never
+
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Backend dependency audit
+        run: |
+          composer install --no-dev --prefer-dist --no-progress
+          composer audit --no-dev --format=json --no-interaction || true
+
+  scheduled-jobs:
+    name: Scheduled Jobs (Daily)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, mbstring, bcmath, xml
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: Install dependencies
+        run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
+
+      - name: Run scheduled jobs
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: ${{ secrets.POSTGRES_HOST }}
+          DB_PORT: ${{ secrets.POSTGRES_PORT }}
+          DB_DATABASE: ${{ secrets.POSTGRES_DB }}
+          DB_USERNAME: ${{ secrets.POSTGRES_USER }}
+          DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          APP_KEY: ${{ secrets.APP_KEY }}
+          APP_ENV: production
+        run: |
+          php artisan model:prune --model=App\\Models\\IdempotencyRecord --force
+          php artisan recurring-expenses:sync-reminders
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
