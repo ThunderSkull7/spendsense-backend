@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Subscription;
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,7 +39,17 @@ class UpdateSubscriptionRequest extends FormRequest
             $rules['amount'] = ['sometimes', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'];
             $rules['frequency'] = ['sometimes', Rule::in(Subscription::FREQUENCIES)];
             $rules['next_renewal_date'] = 'sometimes|date_format:Y-m-d';
-            $rules['category_id'] = 'sometimes|nullable|integer|exists:categories,id';
+            $rules['category_id'] = [
+                'sometimes',
+                'nullable',
+                'integer',
+                new AvailableCategory(
+                    (int) $this->user()->id,
+                    $subscription instanceof Subscription && $subscription->category_id !== null
+                        ? (int) $subscription->category_id
+                        : null
+                ),
+            ];
         }
 
         return $rules;

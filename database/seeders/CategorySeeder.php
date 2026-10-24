@@ -2,64 +2,31 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
+use App\Support\DefaultCategories;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class CategorySeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Seed the shared default categories. This is safe to run repeatedly:
+     * name/type/user_id identifies the existing shared row, while default_key
+     * provides database-level protection against duplicate defaults.
      */
     public function run(): void
     {
-        DB::table('categories')->insert([
-            
-            // Expense Categories
-            [
-                'name' => 'Food',
-                'type' => 'expense',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Transport',
-                'type' => 'expense',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Shopping',
-                'type' => 'expense',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Entertainment',
-                'type' => 'expense',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Bills',
-                'type' => 'expense',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-
-            // Income Categories
-            [
-                'name' => 'Salary',
-                'type' => 'income',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Freelance',
-                'type' => 'income',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-
-        ]);
+        foreach (DefaultCategories::all() as $category) {
+            Category::query()->updateOrCreate(
+                [
+                    'name' => $category['name'],
+                    'type' => $category['type'],
+                    'user_id' => null,
+                ],
+                [
+                    'is_default' => true,
+                    'default_key' => DefaultCategories::key($category['type'], $category['name']),
+                ]
+            );
+        }
     }
 }

@@ -29,7 +29,9 @@ class BudgetController extends Controller
     {
         $validated = $request->validated();
 
-        $category = Category::find($validated['category_id']);
+        $category = Category::query()
+            ->availableTo((int) auth()->id())
+            ->find($validated['category_id']);
         if ($category === null || $category->type !== 'expense') {
             return response()->json([
                 'success' => false,
@@ -89,7 +91,9 @@ class BudgetController extends Controller
         }
 
         if (array_key_exists('category_id', $validated)) {
-            $category = Category::find($validated['category_id']);
+            $category = Category::query()
+                ->availableTo((int) auth()->id(), null, (int) $budget->category_id)
+                ->find($validated['category_id']);
             if ($category === null || $category->type !== 'expense') {
                 return response()->json([
                     'success' => false,

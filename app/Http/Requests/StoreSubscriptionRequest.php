@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Subscription;
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -29,7 +30,11 @@ class StoreSubscriptionRequest extends FormRequest
             'amount' => ['nullable', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'frequency' => ['nullable', Rule::in(Subscription::FREQUENCIES)],
             'next_renewal_date' => 'nullable|date_format:Y-m-d',
-            'category_id' => 'nullable|integer|exists:categories,id',
+            'category_id' => [
+                'nullable',
+                'integer',
+                new AvailableCategory((int) $this->user()->id),
+            ],
             'status' => ['sometimes', 'required', Rule::in(Subscription::STATUSES)],
             'notes' => 'nullable|string|max:2000',
         ];

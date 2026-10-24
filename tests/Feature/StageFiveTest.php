@@ -26,7 +26,10 @@ afterEach(function () {
 
 function stage5Category(string $name = 'Food', string $type = 'expense'): Category
 {
-    return Category::create(['name' => $name, 'type' => $type]);
+    return Category::query()->firstOrCreate(
+        ['name' => $name, 'type' => $type, 'user_id' => null],
+        ['is_default' => true]
+    );
 }
 
 function stage5Expense(User $user, Category $category, string $amount, string $date, ?string $description = 'Stage 5 expense'): Expense

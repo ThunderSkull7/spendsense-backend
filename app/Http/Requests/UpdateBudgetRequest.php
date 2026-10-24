@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Budget;
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -53,8 +54,20 @@ class UpdateBudgetRequest extends FormRequest
 
     public function rules(): array
     {
+        $budget = $this->route('budget');
+        $currentCategoryId = $budget instanceof Budget
+            ? (int) $budget->category_id
+            : null;
+
         return [
-            'category_id' => 'sometimes|integer|exists:categories,id',
+            'category_id' => [
+                'sometimes',
+                'integer',
+                new AvailableCategory(
+                    (int) $this->user()->id,
+                    $currentCategoryId
+                ),
+            ],
             'limit_amount' => ['sometimes', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'month_year' => 'sometimes|date_format:Y-m-d',
             'alert_thresholds' => 'sometimes|required|array|min:1|max:5',

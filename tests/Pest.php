@@ -42,14 +42,25 @@ expect()->extend('toBeOne', function () {
 */
 
 use App\Models\Category;
+use App\Models\User;
 
-function makeExpenseCategory(): Category
+function makeExpenseCategory(?User $owner = null): Category
 {
-    return Category::create(['name' => fake()->unique()->word() . fake()->unique()->numerify('###'), 'type' => 'expense']);
+    return Category::create([
+        'name' => fake()->unique()->word() . fake()->unique()->numerify('###'),
+        'type' => 'expense',
+        'user_id' => $owner?->id,
+        'is_default' => $owner === null,
+    ]);
 }
 
-function makeIncomeCategory(): Category
+function makeIncomeCategory(?User $owner = null): Category
 {
-    return Category::create(['name' => fake()->unique()->word() . fake()->unique()->numerify('###'), 'type' => 'income']);
+    return Category::create([
+        'name' => fake()->unique()->word() . fake()->unique()->numerify('###'),
+        'type' => 'income',
+        'user_id' => $owner?->id,
+        'is_default' => $owner === null,
+    ]);
 }
 

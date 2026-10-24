@@ -153,7 +153,7 @@ class RecurringExpenseController extends Controller
             }
 
             if (array_key_exists('category_id', $validated)) {
-                $this->ensureExpenseCategory((int) $validated['category_id']);
+                $this->ensureExpenseCategory((int) $validated['category_id'], (int) $locked->category_id);
             }
 
             $merged = [
@@ -277,9 +277,11 @@ class RecurringExpenseController extends Controller
             ->firstOrFail();
     }
 
-    private function ensureExpenseCategory(int $categoryId): void
+    private function ensureExpenseCategory(int $categoryId, ?int $allowId = null): void
     {
-        $category = Category::query()->find($categoryId);
+        $category = Category::query()
+            ->availableTo((int) auth()->id(), null, $allowId)
+            ->find($categoryId);
 
         if ($category === null || $category->type !== 'expense') {
             throw ValidationException::withMessages([

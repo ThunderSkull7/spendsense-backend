@@ -9,6 +9,9 @@ on:
     # Run daily at 03:00 UTC to verify PostgreSQL constraints and scheduled jobs
     - cron: '0 3 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   backend-tests-sqlite:
     name: Backend Tests (SQLite)
@@ -40,6 +43,18 @@ jobs:
 
       - name: Run SQLite tests
         run: php vendor/bin/pest --colors=never
+
+      - name: Smoke-test scheduled job commands
+        env:
+          APP_KEY: base64:MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/testing.sqlite
+        run: |
+          mkdir -p database
+          touch database/testing.sqlite
+          php artisan migrate --force
+          php artisan model:prune --model='App\Models\IdempotencyRecord'
+          php artisan recurring-expenses:sync-reminders
 
   backend-tests-postgres:
     name: Backend Tests (PostgreSQL)
@@ -123,6 +138,11 @@ jobs:
     name: Scheduled Jobs (Daily)
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Production writes must not be cancelled by an unrelated push CI run.
+    concurrency:
+      group: scheduled-jobs
+      cancel-in-progress: false
     env:
       DB_CONNECTION: pgsql
       DB_HOST: ${{ secrets.POSTGRES_HOST }}
@@ -130,8 +150,10 @@ jobs:
       DB_DATABASE: ${{ secrets.POSTGRES_DB }}
       DB_USERNAME: ${{ secrets.POSTGRES_USER }}
       DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      DB_SSLMODE: require
       APP_KEY: ${{ secrets.APP_KEY }}
       APP_ENV: production
+      APP_DEBUG: 'false'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -151,12 +173,24 @@ jobs:
       - name: Install dependencies
         run: composer install --no-dev --prefer-dist --no-progress --optimize-autoloader
 
-      - name: Run scheduled jobs
-        if: env.DB_HOST && env.DB_PORT && env.DB_DATABASE && env.DB_USERNAME && env.DB_PASSWORD && env.APP_KEY
+      - name: Verify scheduled-job configuration
         run: |
-          php artisan model:prune --model=App\\Models\\IdempotencyRecord --force
+          missing=()
+          for var in DB_HOST DB_PORT DB_DATABASE DB_USERNAME DB_PASSWORD APP_KEY; do
+            if [ -z "${!var}" ]; then missing+=("$var"); fi
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing scheduled-job configuration: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Run scheduled jobs
+        run: |
+          php artisan model:prune --model='App\Models\IdempotencyRecord'
           php artisan recurring-expenses:sync-reminders
 
+# Do not let a push/PR run cancel the scheduled production job. Other runs on
+# the same ref still cancel their older counterparts.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}

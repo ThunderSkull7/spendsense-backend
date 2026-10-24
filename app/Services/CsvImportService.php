@@ -35,7 +35,7 @@ class CsvImportService
         }
 
         $categories = Category::query()
-            ->where('type', 'expense')
+            ->availableTo($userId, 'expense')
             ->get()
             ->keyBy('name')
             ->toArray();

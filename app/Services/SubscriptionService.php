@@ -110,7 +110,7 @@ class SubscriptionService
 
             $categoryId = $data['category_id'] ?? null;
             if ($schedule === null && $categoryId !== null) {
-                $this->assertExpenseCategory((int) $categoryId);
+                $this->assertExpenseCategory($userId, (int) $categoryId);
             }
 
             try {
@@ -136,7 +136,7 @@ class SubscriptionService
 
             if (! $locked->isLinked() && array_key_exists('category_id', $data)) {
                 if ($data['category_id'] !== null) {
-                    $this->assertExpenseCategory((int) $data['category_id']);
+                    $this->assertExpenseCategory($userId, (int) $data['category_id'], (int) $locked->category_id);
                 }
             }
 
@@ -381,9 +381,11 @@ class SubscriptionService
         ];
     }
 
-    private function assertExpenseCategory(int $categoryId): void
+    private function assertExpenseCategory(int $userId, int $categoryId, ?int $allowId = null): void
     {
-        $category = Category::query()->find($categoryId);
+        $category = Category::query()
+            ->availableTo($userId, null, $allowId)
+            ->find($categoryId);
 
         if ($category === null || $category->type !== 'expense') {
             throw ValidationException::withMessages([

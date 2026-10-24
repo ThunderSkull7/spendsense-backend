@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\RecurringExpense;
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,10 +16,25 @@ class UpdateRecurringExpenseRequest extends FormRequest
 
     public function rules(): array
     {
+        $scheduleId = $this->route('recurringExpense');
+        $currentCategoryId = is_numeric($scheduleId)
+            ? RecurringExpense::query()
+                ->where('user_id', $this->user()->id)
+                ->whereKey((int) $scheduleId)
+                ->value('category_id')
+            : null;
+
         return [
             'description' => ['sometimes', 'required', 'string', 'max:255'],
             'amount' => ['sometimes', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
-            'category_id' => ['sometimes', 'integer', 'exists:categories,id'],
+            'category_id' => [
+                'sometimes',
+                'integer',
+                new AvailableCategory(
+                    (int) $this->user()->id,
+                    $currentCategoryId === null ? null : (int) $currentCategoryId
+                ),
+            ],
             'frequency' => ['sometimes', Rule::in(RecurringExpense::FREQUENCIES)],
             'start_date' => ['sometimes', 'date_format:Y-m-d'],
             'end_date' => ['nullable', 'date_format:Y-m-d'],

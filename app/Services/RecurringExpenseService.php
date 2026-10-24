@@ -307,7 +307,9 @@ class RecurringExpenseService
                 throw new ConflictHttpException('A cancelled occurrence cannot be paid.');
             }
 
-            $category = Category::query()->find($lockedSchedule->category_id);
+            $category = Category::query()
+                ->availableTo($userId, null, (int) $lockedSchedule->category_id)
+                ->find($lockedSchedule->category_id);
             if ($category === null || $category->type !== 'expense') {
                 throw ValidationException::withMessages([
                     'category_id' => 'The schedule category is no longer available for expenses.',

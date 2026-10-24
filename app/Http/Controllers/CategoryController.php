@@ -12,34 +12,71 @@ class CategoryController extends Controller
 {
     public function index(): JsonResponse
     {
-        $categories = Category::orderBy('type')->orderBy('name')->get();
+        $categories = Category::query()
+            ->availableTo((int) auth()->id())
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
 
         return response()->json([
             'success' => true,
-            'data'    => $categories,
+            'data' => $categories,
         ]);
     }
 
     public function store(StoreCategoryRequest $request): JsonResponse
     {
-        $category = Category::create($request->validated());
+        try {
+            $category = Category::create([
+                'name' => $request->validated('name'),
+                'type' => $request->validated('type'),
+                'user_id' => auth()->id(),
+                'is_default' => false,
+            ]);
+        } catch (QueryException $exception) {
+            if ($this->isUniqueViolation($exception)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a category with this name and type.',
+                ], 422);
+            }
+
+            throw $exception;
+        }
 
         return response()->json([
             'success' => true,
-            'data'    => $category,
+            'data' => $category,
         ], 201);
     }
 
     public function show(Category $category): JsonResponse
     {
+        if (! $category->isDefault() && $category->user_id !== auth()->id()) {
+            abort(404);
+        }
+
         return response()->json([
             'success' => true,
-            'data'    => $category,
+            'data' => $category,
         ]);
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): JsonResponse
     {
+        // The request authorization already blocks defaults and hides another
+        // user's private category. Keep these checks as defense in depth.
+        if ($category->isDefault()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Shared default categories cannot be edited.',
+            ], 403);
+        }
+
+        if ($category->user_id !== auth()->id()) {
+            abort(404);
+        }
+
         $validated = $request->validated();
 
         // Changing the type would make existing expenses or budgets point at
@@ -74,16 +111,38 @@ class CategoryController extends Controller
             }
         }
 
-        $category->update($validated);
+        try {
+            $category->update($validated);
+        } catch (QueryException $exception) {
+            if ($this->isUniqueViolation($exception)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a category with this name and type.',
+                ], 422);
+            }
+
+            throw $exception;
+        }
 
         return response()->json([
             'success' => true,
-            'data'    => $category->fresh(),
+            'data' => $category->fresh(),
         ]);
     }
 
     public function destroy(Category $category): JsonResponse
     {
+        if ($category->isDefault()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Shared default categories cannot be deleted.',
+            ], 403);
+        }
+
+        if ($category->user_id !== auth()->id()) {
+            abort(404);
+        }
+
         // Prevent deletion if category is referenced by any expense, including
         // soft-deleted expenses whose row still owns the foreign key.
         if ($category->expenses()->withTrashed()->exists()) {
@@ -132,5 +191,10 @@ class CategoryController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    private function isUniqueViolation(QueryException $exception): bool
+    {
+        return in_array((string) $exception->getCode(), ['23000', '23505'], true);
     }
 }

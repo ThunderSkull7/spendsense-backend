@@ -19,9 +19,14 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-function subscriptionCategory(string $name = 'Subscriptions'): Category
+function subscriptionCategory(string $name = 'Subscriptions', ?User $owner = null): Category
 {
-    return Category::create(['name' => $name, 'type' => 'expense']);
+    return Category::create([
+        'name' => $name,
+        'type' => 'expense',
+        'user_id' => $owner?->id,
+        'is_default' => $owner === null,
+    ]);
 }
 
 function subscriptionPayload(array $overrides = []): array
@@ -251,7 +256,10 @@ test('subscription validation ownership and financial side effects are enforced'
     $user = User::factory()->create();
     $other = User::factory()->create();
     $category = subscriptionCategory();
-    $incomeCategory = Category::create(['name' => 'Salary', 'type' => 'income']);
+    $incomeCategory = Category::query()->firstOrCreate(
+        ['name' => 'Salary', 'type' => 'income', 'user_id' => null],
+        ['is_default' => true]
+    );
     $otherSchedule = createSubscriptionSchedule($this, $other, subscriptionCategory('Other category'));
 
     $this->actingAs($user)->postJson('/api/subscriptions', [
@@ -313,7 +321,7 @@ test('subscription validation ownership and financial side effects are enforced'
 
 test('a category used by a subscription tracker cannot change type or be deleted', function () {
     $user = User::factory()->create();
-    $category = subscriptionCategory('Tracked category');
+    $category = subscriptionCategory('Tracked category', $user);
     createSubscription($this, $user, ['category_id' => $category->id]);
 
     $this->actingAs($user)
