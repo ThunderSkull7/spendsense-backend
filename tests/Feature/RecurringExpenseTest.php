@@ -877,7 +877,7 @@ test('a linked actual expense can be soft-deleted and restored without duplicati
 
 test('categories referenced by a schedule cannot change type or be deleted', function () {
     $user = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($user);
     makeBillSchedule($user, $category);
 
     $this->actingAs($user)->putJson("/api/categories/{$category->id}", ['type' => 'income'])

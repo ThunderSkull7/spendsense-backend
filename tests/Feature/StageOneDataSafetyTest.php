@@ -40,7 +40,7 @@ function stageOneIncomePayload(array $overrides = []): array
 
 test('a soft-deleted expense is hidden, listed in trash, and restorable by its owner', function () {
     $user = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($user);
     $expense = Expense::factory()->create([
         'user_id' => $user->id,
         'category_id' => $category->id,
@@ -81,7 +81,7 @@ test('a soft-deleted expense is hidden, listed in trash, and restorable by its o
 test('trash and restore are scoped to the authenticated owner', function () {
     $owner = User::factory()->create();
     $intruder = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($owner);
     $expense = Expense::factory()->create([
         'user_id' => $owner->id,
         'category_id' => $category->id,
@@ -434,7 +434,7 @@ test('budgets reject zero limits and income categories', function () {
 
 test('a referenced category cannot change type', function () {
     $user = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($user);
     $expense = Expense::factory()->create([
         'user_id' => $user->id,
         'category_id' => $category->id,
@@ -463,7 +463,7 @@ test('a referenced category cannot change type', function () {
 
 test('a category referenced by a budget cannot change type or be deleted', function () {
     $user = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($user);
     Budget::create([
         'user_id' => $user->id,
         'category_id' => $category->id,
@@ -489,7 +489,7 @@ test('a category referenced by a budget cannot change type or be deleted', funct
 
 test('a category with only a soft-deleted expense cannot be deleted', function () {
     $user = User::factory()->create();
-    $category = makeExpenseCategory();
+    $category = makeExpenseCategory($user);
     $expense = Expense::factory()->create([
         'user_id' => $user->id,
         'category_id' => $category->id,

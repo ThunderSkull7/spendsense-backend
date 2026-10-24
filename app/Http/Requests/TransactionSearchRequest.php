@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\AvailableCategory;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -22,7 +23,11 @@ class TransactionSearchRequest extends FormRequest
             'to' => ['nullable', 'date_format:Y-m-d'],
             'min_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999.99', 'decimal:0,2'],
             'max_amount' => ['nullable', 'numeric', 'min:0', 'max:99999999.99', 'decimal:0,2'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_id' => [
+                'nullable',
+                'integer',
+                new AvailableCategory((int) $this->user()->id),
+            ],
             'sort' => ['nullable', 'in:date_desc,date_asc,amount_desc,amount_asc'],
             'per_page' => ['nullable', 'integer', 'between:10,100'],
             'page' => ['nullable', 'integer', 'min:1'],

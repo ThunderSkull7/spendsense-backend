@@ -11,6 +11,14 @@ on:
         options:
           - 'NO'
           - 'YES'
+      legacy_categories_reviewed:
+        description: 'Select YES only after reviewing every pre-existing non-default category and accepting its historical/read-only status'
+        required: true
+        default: 'NO'
+        type: choice
+        options:
+          - 'NO'
+          - 'YES'
 
 permissions:
   contents: read
@@ -24,6 +32,11 @@ jobs:
     name: Run Production Migrations
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # The manual confirmation below is the first gate. Configure required
+    # reviewers on this Environment for an independent second approval gate.
+    environment:
+      name: production
+      url: https://spendsense-api-t0up.onrender.com
     env:
       DB_CONNECTION: pgsql
       DB_HOST: ${{ secrets.POSTGRES_HOST }}
@@ -31,8 +44,10 @@ jobs:
       DB_DATABASE: ${{ secrets.POSTGRES_DB }}
       DB_USERNAME: ${{ secrets.POSTGRES_USER }}
       DB_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      DB_SSLMODE: require
       APP_KEY: ${{ secrets.APP_KEY }}
       APP_ENV: production
+      APP_DEBUG: 'false'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,11 +172,30 @@ jobs:
 
           echo "Preflight checks passed."
 
+      - name: Preflight category ownership
+        run: |
+          if [ "${{ github.event.inputs.legacy_categories_reviewed }}" = "YES" ]; then
+            php artisan categories:audit-preflight --allow-legacy
+          else
+            php artisan categories:audit-preflight
+          fi
+
       - name: Run migration status (pre-migration)
         run: php artisan migrate:status --database=pgsql
 
       - name: Run production migrations
         run: php artisan migrate --force --database=pgsql
+
+      - name: Seed shared default categories (idempotent)
+        run: php artisan db:seed --class=CategorySeeder --force --database=pgsql
+
+      - name: Audit category ownership
+        run: |
+          if [ "${{ github.event.inputs.legacy_categories_reviewed }}" = "YES" ]; then
+            php artisan categories:audit-ownership
+          else
+            php artisan categories:audit-ownership --strict
+          fi
 
       - name: Verify migration status (post-migration)
         run: php artisan migrate:status --database=pgsql

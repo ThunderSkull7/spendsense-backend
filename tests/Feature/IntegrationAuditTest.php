@@ -17,7 +17,12 @@ uses(RefreshDatabase::class);
 
 test('category with associated budget cannot be deleted', function () {
     $user = User::factory()->create();
-    $category = Category::create(['name' => 'Test', 'type' => 'expense']);
+    $category = Category::create([
+        'name' => 'Test',
+        'type' => 'expense',
+        'user_id' => $user->id,
+        'is_default' => false,
+    ]);
     Budget::create([
         'user_id'      => $user->id,
         'limit_amount' => 500,
@@ -41,7 +46,12 @@ test('category with associated budget cannot be deleted', function () {
 
 test('blocked deletion preserves all associated records', function () {
     $user = User::factory()->create();
-    $category = Category::create(['name' => 'Test', 'type' => 'expense']);
+    $category = Category::create([
+        'name' => 'Test',
+        'type' => 'expense',
+        'user_id' => $user->id,
+        'is_default' => false,
+    ]);
     $budget = Budget::create([
         'user_id'      => $user->id,
         'limit_amount' => 500,

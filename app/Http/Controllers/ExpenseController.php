@@ -42,7 +42,9 @@ class ExpenseController extends Controller
     {
         $validated = $request->validated();
 
-        $category = Category::findOrFail($validated['category_id']);
+        $category = Category::query()
+            ->availableTo((int) auth()->id())
+            ->findOrFail($validated['category_id']);
         if ($category->type !== 'expense') {
             return response()->json([
                 'success' => false,
@@ -85,7 +87,9 @@ class ExpenseController extends Controller
         $validated = $request->validated();
 
         if (isset($validated['category_id'])) {
-            $category = Category::findOrFail($validated['category_id']);
+            $category = Category::query()
+                ->availableTo((int) auth()->id(), null, (int) $expense->category_id)
+                ->findOrFail($validated['category_id']);
             if ($category->type !== 'expense') {
                 return response()->json([
                     'success' => false,

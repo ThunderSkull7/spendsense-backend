@@ -23,7 +23,10 @@ afterEach(function () {
 
 function insightsCategory(string $name = 'Food', string $type = 'expense'): Category
 {
-    return Category::create(['name' => $name, 'type' => $type]);
+    return Category::query()->firstOrCreate(
+        ['name' => $name, 'type' => $type, 'user_id' => null],
+        ['is_default' => true]
+    );
 }
 
 function insightsExpense(User $user, Category $category, string $amount, string $date): Expense

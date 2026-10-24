@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Budget;
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -36,7 +37,11 @@ class StoreBudgetRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => 'required|integer|exists:categories,id',
+            'category_id' => [
+                'required',
+                'integer',
+                new AvailableCategory((int) $this->user()->id),
+            ],
             'limit_amount' => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
             'month_year' => 'required|date_format:Y-m-d',
             'alert_thresholds' => 'nullable|array|min:1|max:5',

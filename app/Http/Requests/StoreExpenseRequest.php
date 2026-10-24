@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\AvailableCategory;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreExpenseRequest extends FormRequest
@@ -15,7 +16,11 @@ class StoreExpenseRequest extends FormRequest
     {
         return [
             'amount'       => ['required', 'numeric', 'gt:0', 'max:99999999.99', 'decimal:0,2'],
-            'category_id'  => 'required|integer|exists:categories,id',
+            'category_id'  => [
+                'required',
+                'integer',
+                new AvailableCategory((int) $this->user()->id),
+            ],
             'expense_date' => 'required|date',
             'description'  => 'nullable|string',
         ];
