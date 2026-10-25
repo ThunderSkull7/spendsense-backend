@@ -129,6 +129,43 @@ test('an authenticated session persists across separate requests', function () {
         ->assertJsonPath('email', 'persist@example.com');
 });
 
+test('profile hydration and updates work through a real stateful session', function () {
+    $register = $this->withHeaders(ssStatefulHeaders())->postJson('/api/register', [
+        'name' => 'Profile User',
+        'email' => 'profile-session@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ]);
+    $register->assertCreated();
+    $sessionId = ssSessionId($register);
+    expect($sessionId)->not->toBeNull();
+
+    ssResetRequestState();
+    $this->withHeaders(ssStatefulHeaders())
+        ->withCredentials()
+        ->withCookie(ssSessionCookieName(), $sessionId)
+        ->getJson('/api/user')
+        ->assertOk()
+        ->assertJsonPath('user.name', 'Profile User')
+        ->assertJsonPath('user.email', 'profile-session@example.com');
+
+    ssResetRequestState();
+    $this->withHeaders(ssStatefulHeaders())
+        ->withCredentials()
+        ->withCookie(ssSessionCookieName(), $sessionId)
+        ->putJson('/api/user', ['name' => 'Updated Profile User'])
+        ->assertOk()
+        ->assertJsonPath('user.name', 'Updated Profile User');
+
+    ssResetRequestState();
+    $this->withHeaders(ssStatefulHeaders())
+        ->withCredentials()
+        ->withCookie(ssSessionCookieName(), $sessionId)
+        ->getJson('/api/user')
+        ->assertOk()
+        ->assertJsonPath('user.name', 'Updated Profile User');
+});
+
 test('logout invalidates the authenticated session', function () {
     $register = $this->withHeaders(ssStatefulHeaders())->postJson('/api/register', [
         'name' => 'Logout User',

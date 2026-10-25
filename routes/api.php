@@ -18,6 +18,7 @@ use App\Http\Controllers\FullDataExportController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\NetWorthController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RecurringIncomeController;
@@ -115,6 +116,12 @@ Route::post('/logout', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Current user profile. The legacy /user route remains in routes/web.php
+    // for existing callers; the frontend uses /api/user so session hydration
+    // and profile updates share the same API client and CSRF handling.
+    Route::get('/user', [ProfileController::class, 'show']);
+    Route::put('/user', [ProfileController::class, 'update']);
+
     // Numeric-only identifiers keep malformed IDs on the normal 404 path.
     Route::pattern('expense', '[0-9]+');
     Route::pattern('income', '[0-9]+');
