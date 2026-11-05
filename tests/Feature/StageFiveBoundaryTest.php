@@ -5,6 +5,7 @@ use App\Models\Category;
 use App\Models\Expense;
 use App\Models\Income;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 
@@ -111,6 +112,8 @@ test('the report, the analytics endpoints and the search count the same transact
 });
 
 test('the budget alert spend includes the last day of the month', function () {
+    Carbon::setTestNow('2026-10-31 12:00:00');
+
     $user = User::factory()->create();
     $food = Category::create(['name' => 'Boundary Budget Food', 'type' => 'expense']);
 
@@ -132,8 +135,121 @@ test('the budget alert spend includes the last day of the month', function () {
     $alerts = $this->actingAs($user)->getJson('/api/analytics/budget-alerts?year=2026&month=10');
     $alerts->assertOk();
 
-    // The month is over its limit, so the persisted alert must exist.
+    // The month is over its limit, so the persisted alert must exist when queried for October.
     $budgetAlerts = $this->actingAs($user)->getJson('/api/budget-alerts');
     $budgetAlerts->assertOk();
     expect($budgetAlerts->json('data.alerts'))->not->toBeEmpty();
+
+    $explicitAlerts = $this->actingAs($user)->getJson('/api/budget-alerts?month=2026-10');
+    $explicitAlerts->assertOk();
+    expect($explicitAlerts->json('data.alerts'))->not->toBeEmpty();
+
+    Carbon::setTestNow();
+});
+
+test('expenses on adjacent month boundaries are strictly excluded from current month budget alerts', function () {
+    $user = User::factory()->create();
+    $food = Category::create(['name' => 'Adjacent Month Boundary Food', 'type' => 'expense']);
+
+    Budget::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'limit_amount' => '100.00',
+        'month_year' => '2026-10-01',
+        'alert_thresholds' => [50, 80, 100],
+    ]);
+
+    // Expense on the final day of the preceding month (September 30)
+    Expense::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'amount' => '60.00',
+        'description' => 'Preceding month end expense',
+        'expense_date' => '2026-09-30',
+    ]);
+
+    // Expense on the first day of the subsequent month (November 1)
+    Expense::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'amount' => '60.00',
+        'description' => 'Subsequent month start expense',
+        'expense_date' => '2026-11-01',
+    ]);
+
+    // Query October budget alerts: neither adjacent month expense should count toward October
+    $octoberAlerts = $this->actingAs($user)->getJson('/api/budget-alerts?month=2026-10');
+    $octoberAlerts->assertOk();
+    expect($octoberAlerts->json('data.alerts'))->toBeEmpty();
+
+    $octoberAnalytics = $this->actingAs($user)->getJson('/api/analytics/budget-alerts?year=2026&month=10');
+    $octoberAnalytics->assertOk();
+    expect($octoberAnalytics->json('data.alerts'))->toBeEmpty();
+
+    // Now add transactions on October 1 (first day) and October 31 (last day) totaling exactly 50.00 (50% threshold)
+    Expense::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'amount' => '25.00',
+        'description' => 'October first day expense',
+        'expense_date' => '2026-10-01',
+    ]);
+    Expense::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'amount' => '25.00',
+        'description' => 'October last day expense',
+        'expense_date' => '2026-10-31',
+    ]);
+
+    $octoberAlertsAfter = $this->actingAs($user)->getJson('/api/budget-alerts?month=2026-10');
+    $octoberAlertsAfter->assertOk();
+    expect($octoberAlertsAfter->json('data.alerts'))->toHaveCount(1)
+        ->and($octoberAlertsAfter->json('data.alerts.0.threshold'))->toBe(50)
+        ->and($octoberAlertsAfter->json('data.alerts.0.spent_amount'))->toBe('50.00');
+});
+
+test('budget alerts queried across month transitions isolate alerts to their respective periods', function () {
+    $user = User::factory()->create();
+    $food = Category::create(['name' => 'Transition Boundary Food', 'type' => 'expense']);
+
+    Budget::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'limit_amount' => '100.00',
+        'month_year' => '2026-10-01',
+        'alert_thresholds' => [50, 80, 100],
+    ]);
+
+    Expense::create([
+        'user_id' => $user->id,
+        'category_id' => $food->id,
+        'amount' => '100.00',
+        'description' => 'October full spend',
+        'expense_date' => '2026-10-31',
+    ]);
+
+    // When the system clock is in October (e.g. 2026-10-31 23:59:59)
+    Carbon::setTestNow('2026-10-31 23:59:59');
+    $octoberAlerts = $this->actingAs($user)->getJson('/api/budget-alerts');
+    $octoberAlerts->assertOk();
+    expect($octoberAlerts->json('data.alerts'))->not->toBeEmpty()
+        ->and($octoberAlerts->json('data.summary.period_month'))->toBe('2026-10');
+
+    // When the system clock advances to the next month (2026-11-01 00:00:01)
+    Carbon::setTestNow('2026-11-01 00:00:01');
+
+    // Unparameterized endpoint defaults to the new month (November 2026), where no budget exists
+    $novemberDefault = $this->actingAs($user)->getJson('/api/budget-alerts');
+    $novemberDefault->assertOk();
+    expect($novemberDefault->json('data.alerts'))->toBeEmpty()
+        ->and($novemberDefault->json('data.summary.period_month'))->toBe('2026-11');
+
+    // Explicit query for previous month continues to return October alerts accurately
+    $octoberExplicit = $this->actingAs($user)->getJson('/api/budget-alerts?month=2026-10');
+    $octoberExplicit->assertOk();
+    expect($octoberExplicit->json('data.alerts'))->not->toBeEmpty()
+        ->and($octoberExplicit->json('data.summary.period_month'))->toBe('2026-10');
+
+    Carbon::setTestNow();
 });
