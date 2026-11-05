@@ -19,7 +19,12 @@ uses(RefreshDatabase::class);
  *
  * These tests pin the behaviour so the report, the analytics endpoints and the
  * transaction search always count the same transactions on every supported
- * database.
+ * database:
+ * - Inclusion of boundary days (first and last day of period) across SQLite and PostgreSQL.
+ * - Budget alert spend calculation and threshold persistence on month boundary days
+ *   (including final day of the month and adjacent month boundary isolation).
+ * - Period resolution between default unparameterized requests (scoped to active clock)
+ *   and explicit ?month= queries across month transitions.
  */
 test('a transaction dated on the last day of the period is inside the period', function () {
     $user = User::factory()->create();
