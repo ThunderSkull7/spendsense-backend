@@ -7,9 +7,9 @@ This document provides the complete API specification for the SpendSense Laravel
 ## 1. Global Conventions
 
 - **Base URL:**
-  - Production (Browser): `https://spendsensehq.pages.dev/api` (via Cloudflare Pages reverse proxy)
-  - Production (Direct): `https://spendsense-api-t0up.onrender.com/api`
-  - Local Development: `http://127.0.0.1:8002/api`
+  - **Production:** `https://spendsensehq.pages.dev/api`
+    - All production client and browser requests route through the public browser-facing origin `https://spendsensehq.pages.dev/api`. The Cloudflare Pages reverse proxy worker (`_worker.js`) transparently bridges these requests to the upstream backend service, maintaining first-party cookie context and CSRF protection. Direct requests to backend host infrastructure bypass same-origin protections and are not part of the public client contract.
+  - **Local Development:** `http://127.0.0.1:8002/api`
 - **Content Type:** `application/json` (except streaming CSV exports).
 - **Authentication:** First-party session cookie (`spendsense_session`) managed via Laravel Sanctum.
 - **CSRF Protection:** State-changing requests (`POST`, `PUT`, `DELETE`) require the `X-XSRF-TOKEN` header matching the `XSRF-TOKEN` cookie issued by `/sanctum/csrf-cookie`.
@@ -316,3 +316,4 @@ Manage recurring income obligations and bill calendars. Occurrences represent pr
 - **Protected Routes (`auth:sanctum`):** 102
 - **Idempotency-Protected Mutations (`[Idempotent]`):** 16 mutation endpoints
 - **Rate-Throttled Endpoints:** 8 endpoints (auth, export, and import operations)
+

@@ -138,7 +138,7 @@ erDiagram
 - **PostgreSQL Check Constraints:**
   - `expenses_amount_positive`: `CHECK (amount > 0)`
   - `incomes_amount_positive`: `CHECK (amount > 0)`
-- **Reporting Indexes:** Composite indexes on `(user_id, date)` and `(user_id, category_id, date)` guarantee sub-millisecond range scans for period reports and monthly analytics.
+- **Reporting Indexes:** Composite indexes on `(user_id, date)` and `(user_id, category_id, date)` optimize user-scoped range scans and aggregate queries for period reports and monthly analytics.
 
 ### 4. `budgets`
 - User-defined spending limits per category for calendar periods.
@@ -195,3 +195,4 @@ SpendSense is tested against both SQLite (in-memory test speed) and PostgreSQL (
   }
   ```
 - **Safe Production Execution:** Migrations are executed with preflight checks in the deployment pipeline. Do not run destructive down-migrations against production without taking a database snapshot.
+
