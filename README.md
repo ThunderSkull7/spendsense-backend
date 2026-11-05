@@ -233,7 +233,7 @@ The route definitions and Laravel request/controller classes are the source of t
 GitHub Actions workflows are maintained under `.github/workflows/ci.yml`. The CI pipeline runs on every push and pull request to `main`, validating:
 1. **Backend Tests (SQLite):** Pest unit and feature tests, scheduled commands smoke tests.
 2. **Backend Tests (PostgreSQL):** PostgreSQL migration execution, relational constraints, and transaction tests.
-3. **Dependency Security Audit:** `composer audit` verifying 0 vulnerable packages.
+3. **Dependency Security Audit:** CI runs `composer audit` to check installed dependencies against known security advisories. Consult the latest GitHub Actions run for the current result.
 
 Check the [Actions tab](https://github.com/ThunderSkull7/spendsense-backend/actions) for real-time status.
 
