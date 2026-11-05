@@ -5,7 +5,7 @@ A Laravel API for **SpendSense**, a personal-finance application for tracking in
 <p>
   <a href="https://spendsensehq.pages.dev"><img src="https://img.shields.io/badge/Live%20app-SpendSense-0f766e?style=for-the-badge" alt="Live app"></a>
   <a href="https://github.com/ThunderSkull7/spendsense-backend/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ThunderSkull7/spendsense-backend/ci.yml?branch=main&style=for-the-badge&logo=github-actions&logoColor=white&label=CI" alt="CI Status"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v0.2.0-blue?style=for-the-badge" alt="Version v0.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-Unreleased-yellow?style=for-the-badge" alt="Release status: Unreleased"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
   <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12">

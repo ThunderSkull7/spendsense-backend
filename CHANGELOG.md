@@ -9,15 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
----
-
-## [0.2.0] - 2026-11-05
-
 ### Added
 - **Contributor Experience & Governance Infrastructure:**
   - Added practical [CONTRIBUTING.md](CONTRIBUTING.md) guide detailing development workflow, Pest test commands, Pint formatting, and branch/commit conventions.
   - Added responsible disclosure [SECURITY.md](SECURITY.md) policy with confidential reporting pathways.
-  - Added [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) based on Contributor Covenant v2.1 with clear maintenance contact routing.
+  - Added [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) based on Contributor Covenant v2.1 with maintenance contact routing.
   - Added structured GitHub Issue Forms for bug reports (`bug_report.yml`) and feature requests (`feature_request.yml`).
   - Added standardized [Pull Request template](.github/pull_request_template.md).
 - **Comprehensive Technical Documentation:**
@@ -42,12 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added regression tests for month transitions and adjacent boundary isolation.
 
 ### Security
-- **Dependency Remediation:** Updated Symfony component dependencies to remediate CVE-2026-118516 and associated vendor advisories (PR #4).
-- Verified clean dependency audit via `composer audit` (0 known advisories).
+- **Dependency Remediation:** Updated Symfony component dependencies to current 7.4.x releases, resolving reported Composer security advisories and verifying clean status with zero advisories via `composer audit` (PR #4).
 
 ---
 
 ## [0.1.0] - 2026-10-24
+
+> **Note:** `0.1.0` designates the initial historical development baseline commit (`a4b14e7`) established during core implementation. It represents an internal development milestone rather than a published GitHub Release tag.
 
 ### Added
 - **Core Domain Services & Architecture:**
