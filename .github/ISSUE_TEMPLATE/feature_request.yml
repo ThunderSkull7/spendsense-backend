@@ -1,0 +1,49 @@
+name: Feature Request
+description: Propose a new feature, endpoint, or architecture improvement for SpendSense Backend.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please describe your idea and how it aligns with SpendSense domain principles.
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem or user limitation?
+      placeholder: "e.g., I'm frustrated that I cannot..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution or API Design
+      description: Describe your proposed feature, endpoint contract, or service architecture.
+      placeholder: "Describe the new endpoint, parameters, response structure, or service workflow."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives_considered
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered alternative designs or workarounds?
+      placeholder: "Describe any alternative solutions or implementations evaluated."
+    validations:
+      required: false
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Add any other context, diagrams, or references here.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues to ensure this feature has not already been proposed.
+          required: true
+        - label: I understand that pull requests implementing new features should include Pest automated tests and documentation updates.
+          required: true

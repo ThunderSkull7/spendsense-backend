@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Reporting
+    url: https://github.com/ThunderSkull7/spendsense-backend/blob/main/SECURITY.md
+    about: Please report security vulnerabilities privately. Do not open public issues for security concerns.
+  - name: SpendSense Documentation
+    url: https://github.com/ThunderSkull7/spendsense-backend/tree/main/docs
+    about: Explore the Architecture, API reference, Database design, and Authentication guides.
