@@ -19,6 +19,10 @@ A Laravel API for **SpendSense**, a personal-finance application for tracking in
 | Live application | https://spendsensehq.pages.dev |
 | Frontend source | [ThunderSkull7/spendsense-frontend](https://github.com/ThunderSkull7/spendsense-frontend) |
 | Backend source | [ThunderSkull7/spendsense-backend](https://github.com/ThunderSkull7/spendsense-backend) |
+| Architecture guide | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| API reference | [docs/API.md](docs/API.md) |
+| Database design | [docs/DATABASE.md](docs/DATABASE.md) |
+| Authentication guide | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) |
 | Issues and feature requests | [GitHub Issues](https://github.com/ThunderSkull7/spendsense-backend/issues) |
 
 ## Application preview
@@ -27,12 +31,12 @@ While this repository contains the headless Laravel REST API, it powers the full
 
 | Financial dashboard | Expense management |
 |:---:|:---:|
-| [![SpendSense dashboard](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/chore/batch-2-github-portfolio/docs/screenshots/dashboard-desktop.png)](https://spendsensehq.pages.dev) | [![SpendSense expense ledger](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/chore/batch-2-github-portfolio/docs/screenshots/expenses-desktop.png)](https://spendsensehq.pages.dev) |
+| [![SpendSense dashboard](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/main/docs/screenshots/dashboard-desktop.png)](https://spendsensehq.pages.dev) | [![SpendSense expense ledger](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/main/docs/screenshots/expenses-desktop.png)](https://spendsensehq.pages.dev) |
 | **Cash-flow & budget tracking**<br>Powered by `/api/analytics/*` & `/api/budgets` | **Transaction ledger & soft deletes**<br>Powered by `/api/expenses` & `/api/categories` |
 
 | Financial reports & analytics | Mobile experience |
 |:---:|:---:|
-| [![SpendSense reports](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/chore/batch-2-github-portfolio/docs/screenshots/reports-desktop.png)](https://spendsensehq.pages.dev) | [![SpendSense mobile](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/chore/batch-2-github-portfolio/docs/screenshots/dashboard-mobile.png)](https://spendsensehq.pages.dev) |
+| [![SpendSense reports](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/main/docs/screenshots/reports-desktop.png)](https://spendsensehq.pages.dev) | [![SpendSense mobile](https://raw.githubusercontent.com/ThunderSkull7/spendsense-frontend/main/docs/screenshots/dashboard-mobile.png)](https://spendsensehq.pages.dev) |
 | **Period analysis & CSV exports**<br>Powered by `/api/reports` & `/api/transactions/export` | **Responsive mobile interface**<br>Powered by `/api/dashboard/preferences` & `/user` |
 
 > Explore the complete visual showcase and UI implementation in the [spendsense-frontend](https://github.com/ThunderSkull7/spendsense-frontend) repository or experience the live application at [spendsensehq.pages.dev](https://spendsensehq.pages.dev).
