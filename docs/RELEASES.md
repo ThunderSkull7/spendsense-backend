@@ -40,13 +40,13 @@ The SpendSense system is comprised of two distinct repositories:
 1. **Backend:** [`ThunderSkull7/spendsense-backend`](https://github.com/ThunderSkull7/spendsense-backend) (Laravel REST API hosted on Render with PostgreSQL on Neon)
 2. **Frontend:** [`ThunderSkull7/spendsense-frontend`](https://github.com/ThunderSkull7/spendsense-frontend) (Static vanilla JS application hosted on Cloudflare Pages with Pages Worker reverse proxy)
 
-### Verified Compatibility Matrix
+### Compatibility Matrix
 
-| Backend Ref / Branch | Frontend Ref / Branch | Verification Status | Integration Contract Notes |
+| Backend Ref / Branch | Frontend Ref / Branch | Compatibility Status | Integration Contract Notes |
 |---|---|---|---|
-| `main` branch (Active) | `main` branch (Active) | :white_check_mark: Verified Compatible | Stateful Sanctum session cookies, `/api/*` routes, `/user` hydration route, and same-origin Pages Worker reverse proxy. |
-| Baseline commit `a4b14e7` | Baseline commit `2586369` | :white_check_mark: Verified Baseline | Historical prototype endpoints and legacy reporting payloads. |
-| Mismatched `0.y.z` tags | Mismatched `0.y.z` tags | :warning: Unverified | Because pre-1.0 does not formalize cross-tag compatibility, never assume arbitrary cross-version pairings are compatible without end-to-end integration testing. |
+| `main` branch (Active) | `main` branch (Active) | :white_check_mark: Verified Compatible | Currently verified compatible pairing: stateful Sanctum session cookies, `/api/*` routes, `/user` hydration route, and same-origin Pages Worker reverse proxy. |
+| Historical baseline commit `a4b14e7` | Historical baseline commit `2586369` | :warning: Unverified (Historical Baseline) | Internal development baselines representing initial pre-release implementation. Their existence does not establish verified end-to-end cross-repository compatibility. |
+| Arbitrary historical or cross-version pairings | Arbitrary historical or cross-version pairings | :warning: Unverified | Pre-1.0 versions do not formalize cross-version compatibility. Arbitrary historical or mismatched combinations remain unverified unless supported by explicit integration-test evidence. |
 
 ### Release Sequencing Rules
 
