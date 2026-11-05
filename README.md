@@ -4,6 +4,9 @@ A Laravel API for **SpendSense**, a personal-finance application for tracking in
 
 <p>
   <a href="https://spendsensehq.pages.dev"><img src="https://img.shields.io/badge/Live%20app-SpendSense-0f766e?style=for-the-badge" alt="Live app"></a>
+  <a href="https://github.com/ThunderSkull7/spendsense-backend/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ThunderSkull7/spendsense-backend/ci.yml?branch=main&style=for-the-badge&logo=github-actions&logoColor=white&label=CI" alt="CI Status"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v0.2.0-blue?style=for-the-badge" alt="Version v0.2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
   <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12">
   <img src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
@@ -17,12 +20,17 @@ A Laravel API for **SpendSense**, a personal-finance application for tracking in
 | Resource | Link |
 |---|---|
 | Live application | https://spendsensehq.pages.dev |
-| Frontend source | [ThunderSkull7/spendsense-frontend](https://github.com/ThunderSkull7/spendsense-frontend) |
-| Backend source | [ThunderSkull7/spendsense-backend](https://github.com/ThunderSkull7/spendsense-backend) |
+| Frontend repository | [ThunderSkull7/spendsense-frontend](https://github.com/ThunderSkull7/spendsense-frontend) |
+| Backend repository | [ThunderSkull7/spendsense-backend](https://github.com/ThunderSkull7/spendsense-backend) |
 | Architecture guide | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | API reference | [docs/API.md](docs/API.md) |
 | Database design | [docs/DATABASE.md](docs/DATABASE.md) |
 | Authentication guide | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) |
+| Release & versioning | [docs/RELEASES.md](docs/RELEASES.md) |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
+| Contributor guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Security policy | [SECURITY.md](SECURITY.md) |
+| Code of conduct | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
 | Issues and feature requests | [GitHub Issues](https://github.com/ThunderSkull7/spendsense-backend/issues) |
 
 ## Application preview
@@ -169,16 +177,18 @@ The local API is then available at `http://127.0.0.1:8002`.
 ### 5. Run tests
 
 ```bash
-php artisan test
+composer test
+# or
+php vendor/bin/pest
 ```
 
-The default PHPUnit configuration uses an in-memory SQLite database. PostgreSQL-specific behavior should be verified against a separate disposable PostgreSQL test database using the repository's CI configuration. Do not point tests or migrations at production data.
+The default Pest test suite executes in-memory SQLite tests covering authentication, financial domain operations, date boundaries, and data safety. PostgreSQL integration tests run in CI against a disposable PostgreSQL service to verify database constraints, composite indexes, and transaction safety.
 
 ## Frontend integration
 
 The frontend repository is configured to use the local API origin `http://127.0.0.1:8002` during development. Follow the frontend repository's setup instructions for serving the static application and configuring the browser-facing API origin.
 
-In production, the frontend is served from Cloudflare Pages and its Worker proxies the allowed API paths to the Laravel service. The browser remains on the Pages origin for cookie and CSRF compatibility.
+In production, the frontend is served from Cloudflare Pages and its Worker proxies allowed API paths to the Laravel service on Render. The browser remains on the Pages origin for cookie and CSRF compatibility.
 
 ## Repository map
 
@@ -186,7 +196,7 @@ In production, the frontend is served from Cloudflare Pages and its Worker proxi
 app/
   Http/
     Controllers/     # HTTP endpoints
-    Middleware/      # Cross-cutting request behavior
+    Middleware/      # Cross-cutting request behavior (idempotency, auth)
     Requests/        # Request validation
   Models/            # Eloquent models
   Services/          # Financial and domain operations
@@ -195,19 +205,20 @@ database/
   migrations/        # Schema and integrity changes
   factories/
   seeders/
+docs/                # Architecture, API, database, and release documentation
 routes/
   api.php            # API route contract
   web.php
 tests/
-  Feature/
-  Unit/
+  Feature/           # Pest feature and integration tests
+  Unit/              # Domain unit tests
 docker/
 .github/workflows/   # CI and deployment workflows
 ```
 
 ## API documentation
 
-The route definitions and Laravel request/controller classes are currently the source of truth for the API contract. A curated, versioned OpenAPI specification is not claimed by this repository at this time.
+The route definitions and Laravel request/controller classes are the source of truth for the API contract. See [docs/API.md](docs/API.md) for endpoint documentation, parameter requirements, and JSON payloads.
 
 ## Development notes
 
@@ -217,20 +228,18 @@ The route definitions and Laravel request/controller classes are currently the s
 - Keep credentials and environment-specific values in deployment secrets, never in committed source.
 - Run the relevant SQLite and PostgreSQL test paths before proposing changes affecting persistence.
 
-## Known CI status
+## CI and reliability status
 
-GitHub Actions workflows are maintained under `.github/workflows/`. The workflows include SQLite and PostgreSQL test jobs, a dependency audit, and scheduled-job execution. Check the [Actions tab](https://github.com/ThunderSkull7/spendsense-backend/actions) for current run status; this README does not imply that the latest runs are passing.
+GitHub Actions workflows are maintained under `.github/workflows/ci.yml`. The CI pipeline runs on every push and pull request to `main`, validating:
+1. **Backend Tests (SQLite):** Pest unit and feature tests, scheduled commands smoke tests.
+2. **Backend Tests (PostgreSQL):** PostgreSQL migration execution, relational constraints, and transaction tests.
+3. **Dependency Security Audit:** `composer audit` verifying 0 vulnerable packages.
+
+Check the [Actions tab](https://github.com/ThunderSkull7/spendsense-backend/actions) for real-time status.
 
 ## Contributing
 
-Contributions and technical feedback are welcome. Before opening a pull request:
-
-1. Open or reference an issue describing the change.
-2. Keep changes focused and include regression tests.
-3. Run the relevant test suite locally.
-4. Explain database, API-contract, and deployment implications in the pull request.
-
-Please do not submit real credentials, production database dumps, or personal financial data.
+Contributions and technical feedback are welcome! Please review our [Contributing Guide](CONTRIBUTING.md), [Security Policy](SECURITY.md), and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting pull requests or opening issues.
 
 ## License
 
