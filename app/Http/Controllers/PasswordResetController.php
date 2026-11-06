@@ -117,8 +117,15 @@ class PasswordResetController extends Controller
             ]);
         }
 
-        // Verify token match (supports both hashed and legacy plain tokens for test flexibility)
-        $tokenMatches = Hash::check($validated['token'], $record->token) || $record->token === $validated['token'];
+        // Verify token match (enforce hashed tokens exclusively)
+        $tokenMatches = false;
+        try {
+            $tokenMatches = Hash::check($validated['token'], $record->token);
+        } catch (\RuntimeException) {
+            // Catches non-hash / unhashed legacy tokens gracefully without unhandled 500
+            $tokenMatches = false;
+        }
+
         if (! $tokenMatches) {
             throw ValidationException::withMessages([
                 'token' => 'This password reset token is invalid or has expired.',

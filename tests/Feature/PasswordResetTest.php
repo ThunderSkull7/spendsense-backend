@@ -469,3 +469,69 @@ test('unauthenticated user cannot call password change endpoint', function () {
 
     $response->assertStatus(401);
 });
+
+test('reset password strictly rejects a plaintext token stored in the database (Phase 11.3.1)', function () {
+    $user = User::factory()->create([
+        'email'    => 'plaintext-token@example.com',
+        'password' => 'initial-secure-password-123',
+    ]);
+
+    $rawToken = 'plaintext-unhashed-token-value-999';
+
+    // Directly insert the plaintext token without Hash::make()
+    DB::table('password_reset_tokens')->insert([
+        'email'      => 'plaintext-token@example.com',
+        'token'      => $rawToken,
+        'created_at' => CarbonImmutable::now(),
+    ]);
+
+    $response = $this->postJson('/api/reset-password', [
+        'email'                 => 'plaintext-token@example.com',
+        'token'                 => $rawToken,
+        'password'              => 'attempted-new-password-456',
+        'password_confirmation' => 'attempted-new-password-456',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['token']);
+
+    // Ensure the password was not changed
+    $user->refresh();
+    expect(Hash::check('initial-secure-password-123', $user->password))->toBeTrue();
+    expect(Hash::check('attempted-new-password-456', $user->password))->toBeFalse();
+});
+
+test('reset password rejects token attempting to reset another users password (Phase 11.3.1)', function () {
+    $victim = User::factory()->create([
+        'email'    => 'victim@example.com',
+        'password' => 'victim-password-123',
+    ]);
+
+    $attacker = User::factory()->create([
+        'email'    => 'attacker@example.com',
+        'password' => 'attacker-password-123',
+    ]);
+
+    $attackerToken = 'attacker-valid-token-123';
+    DB::table('password_reset_tokens')->insert([
+        'email'      => 'attacker@example.com',
+        'token'      => Hash::make($attackerToken),
+        'created_at' => CarbonImmutable::now(),
+    ]);
+
+    // Attacker attempts to use their valid token against the victim's email
+    $response = $this->postJson('/api/reset-password', [
+        'email'                 => 'victim@example.com',
+        'token'                 => $attackerToken,
+        'password'              => 'hijacked-password-123',
+        'password_confirmation' => 'hijacked-password-123',
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['token']);
+
+    $victim->refresh();
+    expect(Hash::check('victim-password-123', $victim->password))->toBeTrue();
+    expect(Hash::check('hijacked-password-123', $victim->password))->toBeFalse();
+});
+
