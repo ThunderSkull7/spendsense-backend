@@ -58,6 +58,9 @@ class TransactionSearchController extends Controller
                 return;
             }
 
+            // UTF-8 BOM for spreadsheet compatibility (Excel, etc.)
+            fwrite($output, Csv::BOM);
+
             foreach ($rows as $row) {
                 fputcsv($output, $row, ',', '"', '');
             }

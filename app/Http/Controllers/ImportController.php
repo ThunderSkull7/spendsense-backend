@@ -11,14 +11,25 @@ class ImportController extends Controller
     public function __construct(private readonly CsvImportService $importService) {}
 
     /**
-     * Preview a CSV import without committing.
+     * Preview a CSV import without committing any database records.
      */
     public function preview(CsvImportRequest $request): JsonResponse
     {
         $file = $request->file('file');
         $content = file_get_contents($file->getRealPath());
 
-        $result = $this->importService->parseAndValidate($content, auth()->id());
+        $mapping = $request->input('mapping', []);
+        if (is_string($mapping)) {
+            $decoded = json_decode($mapping, true);
+            $mapping = is_array($decoded) ? $decoded : [];
+        }
+
+        $duplicatePolicy = $request->input('duplicate_policy', 'skip');
+        if (!in_array($duplicatePolicy, ['skip', 'import'], true)) {
+            $duplicatePolicy = 'skip';
+        }
+
+        $result = $this->importService->parseAndValidate($content, auth()->id(), $mapping, $duplicatePolicy);
 
         return response()->json([
             'success' => true,
@@ -27,26 +38,35 @@ class ImportController extends Controller
     }
 
     /**
-     * Execute a confirmed CSV import.
+     * Execute a confirmed CSV import within a safe database transaction.
      */
     public function import(CsvImportRequest $request): JsonResponse
     {
         $file = $request->file('file');
         $content = file_get_contents($file->getRealPath());
 
-        $preview = $this->importService->parseAndValidate($content, auth()->id());
+        $mapping = $request->input('mapping', []);
+        if (is_string($mapping)) {
+            $decoded = json_decode($mapping, true);
+            $mapping = is_array($decoded) ? $decoded : [];
+        }
 
-        // Only import valid, non-duplicate rows
-        $importable = array_filter($preview['valid'], function (array $row) use ($preview) {
-            $key = $this->rowKey($row);
-            $isDuplicate = collect($preview['duplicates'])->contains(function ($dup) use ($key) {
-                return $dup['row'] - 2 === $key; // Adjust for header offset
-            });
+        $duplicatePolicy = $request->input('duplicate_policy', 'skip');
+        if (!in_array($duplicatePolicy, ['skip', 'import'], true)) {
+            $duplicatePolicy = 'skip';
+        }
 
-            return !$isDuplicate;
-        });
+        // Revalidate completely on server
+        $preview = $this->importService->parseAndValidate($content, auth()->id(), $mapping, $duplicatePolicy);
 
-        $result = $this->importService->executeImport(array_values($importable), auth()->id());
+        $duplicateRowNumbers = array_column($preview['duplicates'], 'row');
+
+        $result = $this->importService->executeImport(
+            $preview['valid'],
+            auth()->id(),
+            $duplicatePolicy,
+            $duplicateRowNumbers
+        );
 
         return response()->json([
             'success' => true,
@@ -54,19 +74,9 @@ class ImportController extends Controller
                 'imported' => $result['created'],
                 'skipped' => $result['skipped'],
                 'total_valid' => count($preview['valid']),
-                'duplicates_skipped' => count($preview['duplicates']),
+                'duplicates_skipped' => $duplicatePolicy === 'skip' ? $result['skipped'] : 0,
                 'errors' => $preview['errors'],
             ],
-        ]);
-    }
-
-    private function rowKey(array $row): string
-    {
-        return implode('|', [
-            $row['type'],
-            $row['amount'],
-            $row['date'],
-            $row['type'] === 'expense' ? ($row['description'] ?? '') : ($row['source'] ?? ''),
         ]);
     }
 }

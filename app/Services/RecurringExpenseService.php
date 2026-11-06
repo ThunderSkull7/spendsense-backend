@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Expense;
 use App\Models\RecurringExpense;
 use App\Models\RecurringExpenseOccurrence;
+use App\Support\FrequencyCost;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -126,6 +127,8 @@ class RecurringExpenseService
             'status' => $schedule->status,
             'reminder_days_before' => $schedule->reminder_days_before,
             'notes' => $schedule->notes,
+            'monthly_equivalent' => Money::fromCents(FrequencyCost::monthlyCents($schedule->amount, $schedule->frequency)),
+            'annual_equivalent' => Money::fromCents(FrequencyCost::annualCents($schedule->amount, $schedule->frequency)),
             'next_due_date' => $schedule->status === 'stopped' ? null : $nextDue['occurrence_date'] ?? null,
             'occurrence_count' => $occurrences->count(),
             'summary' => $summary,
@@ -190,6 +193,8 @@ class RecurringExpenseService
         $counts = ['active' => 0, 'paused' => 0, 'stopped' => 0];
         $unpaid = 0;
         $overdue = 0;
+        $monthlyEquivalent = 0;
+        $annualEquivalent = 0;
 
         foreach ($payloads as $payload) {
             $status = $payload['status'] ?? 'active';
@@ -197,12 +202,18 @@ class RecurringExpenseService
             $summary = $payload['summary'] ?? [];
             $unpaid += $this->toCents($summary['unpaid_total'] ?? 0);
             $overdue += $this->toCents($summary['overdue_total'] ?? 0);
+            if ($status === 'active') {
+                $monthlyEquivalent += FrequencyCost::monthlyCents($payload['amount'], $payload['frequency']);
+                $annualEquivalent += FrequencyCost::annualCents($payload['amount'], $payload['frequency']);
+            }
         }
 
         return [
             'active_count' => $counts['active'],
             'paused_count' => $counts['paused'],
             'stopped_count' => $counts['stopped'],
+            'monthly_equivalent_total' => $this->fromCents($monthlyEquivalent),
+            'annual_equivalent_total' => $this->fromCents($annualEquivalent),
             'unpaid_total' => $this->fromCents($unpaid),
             'overdue_total' => $this->fromCents($overdue),
         ];
@@ -259,6 +270,8 @@ class RecurringExpenseService
 
         return [
             'expected_total' => $this->fromCents($expectedCents),
+            'monthly_equivalent' => Money::fromCents(FrequencyCost::monthlyCents($schedule->amount, $schedule->frequency)),
+            'annual_equivalent' => Money::fromCents(FrequencyCost::annualCents($schedule->amount, $schedule->frequency)),
             'paid_total' => $this->fromCents($paidCents),
             'unpaid_total' => $this->fromCents($unpaidCents),
             'overdue_total' => $this->fromCents($overdueCents),

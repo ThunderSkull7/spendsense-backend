@@ -34,7 +34,7 @@ return [
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => ['X-Request-Id'],
 
     'max_age' => 0,
 

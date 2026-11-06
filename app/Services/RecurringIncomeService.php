@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Income;
 use App\Models\RecurringIncome;
 use App\Models\RecurringIncomeOccurrence;
+use App\Support\FrequencyCost;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
@@ -302,6 +303,8 @@ class RecurringIncomeService
             'end_date' => $schedule->end_date->toDateString(),
             'status' => $schedule->status,
             'notes' => $schedule->notes,
+            'monthly_equivalent' => Money::fromCents(FrequencyCost::monthlyCents($schedule->amount, $schedule->frequency)),
+            'annual_equivalent' => Money::fromCents(FrequencyCost::annualCents($schedule->amount, $schedule->frequency)),
             'next_due_date' => $nextDueDate,
             'summary' => [
                 'expected_total' => $this->fromCents($expectedCents),
@@ -339,6 +342,8 @@ class RecurringIncomeService
         $paused = 0;
         $stopped = 0;
         $overdueCount = 0;
+        $monthlyEquivalent = 0;
+        $annualEquivalent = 0;
 
         foreach ($schedules as $schedule) {
             $expected += $this->toCents($schedule['summary']['expected_total']);
@@ -349,6 +354,8 @@ class RecurringIncomeService
 
             if ($schedule['status'] === 'active') {
                 $active++;
+                $monthlyEquivalent += FrequencyCost::monthlyCents($schedule['amount'], $schedule['frequency']);
+                $annualEquivalent += FrequencyCost::annualCents($schedule['amount'], $schedule['frequency']);
             } elseif ($schedule['status'] === 'paused') {
                 $paused++;
             } else {
@@ -359,6 +366,8 @@ class RecurringIncomeService
         return [
             'expected_total' => $this->fromCents($expected),
             'received_total' => $this->fromCents($received),
+            'monthly_equivalent_total' => $this->fromCents($monthlyEquivalent),
+            'annual_equivalent_total' => $this->fromCents($annualEquivalent),
             'overdue_total' => $this->fromCents($overdue),
             'upcoming_total' => $this->fromCents($upcoming),
             'overdue_count' => $overdueCount,
