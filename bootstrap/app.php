@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureIdempotentRequest;
+use App\Http\Middleware\HandleRequestId;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(HandleRequestId::class);
+
         // Enable Sanctum's stateful, cookie-based SPA authentication for the
         // "api" middleware group. For requests whose Origin/Referer matches a
         // configured stateful domain, this starts the session and applies CSRF

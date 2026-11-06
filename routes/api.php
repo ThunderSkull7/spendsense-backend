@@ -14,7 +14,10 @@ use App\Http\Controllers\AnalyticsInsightsController;
 use App\Http\Controllers\BillReminderController;
 use App\Http\Controllers\CashFlowForecastController;
 use App\Http\Controllers\DashboardPreferenceController;
+use App\Http\Controllers\DebtController;
+use App\Http\Controllers\FinancialHealthController;
 use App\Http\Controllers\FullDataExportController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\NetWorthController;
 use App\Http\Controllers\NotificationController;
@@ -115,12 +118,17 @@ Route::post('/logout', function (Request $request) {
     return response()->json(['status' => 'logged_out']);
 });
 
+// Password recovery endpoints
+Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:6,1');
+Route::post('/reset-password',  [PasswordResetController::class, 'resetPassword'])->middleware('throttle:6,1');
+
 Route::middleware('auth:sanctum')->group(function () {
     // Current user profile. The legacy /user route remains in routes/web.php
     // for existing callers; the frontend uses /api/user so session hydration
     // and profile updates share the same API client and CSRF handling.
     Route::get('/user', [ProfileController::class, 'show']);
     Route::put('/user', [ProfileController::class, 'update']);
+    Route::post('/password/change', [PasswordResetController::class, 'changePassword'])->middleware('throttle:6,1');
 
     // Numeric-only identifiers keep malformed IDs on the normal 404 path.
     Route::pattern('expense', '[0-9]+');
@@ -133,6 +141,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::pattern('occurrence', '[0-9]+');
     Route::pattern('netWorthEntry', '[0-9]+');
     Route::pattern('subscription', '[0-9]+');
+    Route::pattern('debt', '[0-9]+');
 
     // Expenses
     Route::post('/expenses',             [ExpenseController::class, 'store'])->middleware('idempotent');
@@ -248,6 +257,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/month-comparison',     [AnalyticsController::class, 'monthComparison']);
     Route::get('/analytics/budget-status',        [AnalyticsController::class, 'budgetStatus']);
     Route::get('/analytics/budget-alerts',        [AnalyticsController::class, 'budgetAlerts']);
+    Route::get('/analytics/financial-health',     [FinancialHealthController::class, 'show']);
 
     // Stage 5 server-side transaction search and streaming CSV export. Both
     // use the same owner-scoped query and exclude soft-deleted ledger rows.
@@ -268,6 +278,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/analytics/savings-progress', [AnalyticsInsightsController::class, 'savingsProgress']);
     Route::get('/analytics/commitments', [AnalyticsInsightsController::class, 'commitments']);
     Route::get('/analytics/data-quality', [AnalyticsInsightsController::class, 'dataQuality']);
+
+    // Debt & Loan Tracker. Liabilities and repayments are tracked safely
+    // without inflating ordinary expense or income ledgers.
+    Route::get('/debts',                 [DebtController::class, 'index']);
+    Route::post('/debts',                [DebtController::class, 'store'])->middleware('idempotent');
+    Route::get('/debts/{debt}',          [DebtController::class, 'show']);
+    Route::put('/debts/{debt}',          [DebtController::class, 'update']);
+    Route::post('/debts/{debt}/repayments', [DebtController::class, 'storeRepayment'])->middleware('idempotent');
+    Route::post('/debts/{debt}/archive', [DebtController::class, 'archive']);
+    Route::post('/debts/{debt}/restore', [DebtController::class, 'restore']);
 
     // Stage 5 reports centre. The preview and the CSV export share one
     // contract, so the exported totals are the totals that were displayed.

@@ -154,27 +154,42 @@ class SavingsGoalService
             ? round(($savedCents / $targetCents) * 100, 2)
             : 0.0;
 
+        $today = CarbonImmutable::today();
+        $isOverdue = $goal->status === SavingsGoal::STATUS_ACTIVE
+            && $goal->target_date !== null
+            && $goal->target_date->lt($today);
+
+        $remainingMonths = null;
+        $monthlyEstimate = null;
+        if ($goal->status === SavingsGoal::STATUS_ACTIVE && $goal->target_date !== null && $remainingCents > 0) {
+            if ($goal->target_date->gte($today)) {
+                $diffMonths = $today->diffInMonths($goal->target_date);
+                $remainingMonths = max(1, (int) $diffMonths);
+                $monthlyEstimate = Money::fromCents((int) round($remainingCents / $remainingMonths));
+            }
+        }
+
         $payload = [
-            'id'                       => $goal->id,
-            'name'                     => $goal->name,
-            'description'              => $goal->description,
-            'target_amount'            => Money::fromCents($targetCents),
-            'saved_amount'             => Money::fromCents($savedCents),
-            'remaining_amount'         => Money::fromCents($remainingCents),
-            'overfunded_amount'        => Money::fromCents($overfundedCents),
-            'progress_percent'         => $progressPercent,
-            'progress_bar_percent'     => min(100, $progressPercent),
-            'status'                   => $goal->status,
-            'target_date'              => $goal->target_date?->toDateString(),
-            'is_overdue'               => $goal->status === SavingsGoal::STATUS_ACTIVE
-                && $goal->target_date !== null
-                && $goal->target_date->lt(CarbonImmutable::today()),
-            'notes'                    => $goal->notes,
-            'completed_at'             => $goal->completed_at?->toIso8601String(),
-            'archived_at'              => $goal->archived_at?->toIso8601String(),
-            'contribution_count'       => $goal->contributions()->count(),
-            'created_at'               => $goal->created_at?->toIso8601String(),
-            'updated_at'               => $goal->updated_at?->toIso8601String(),
+            'id'                             => $goal->id,
+            'name'                           => $goal->name,
+            'description'                    => $goal->description,
+            'target_amount'                  => Money::fromCents($targetCents),
+            'saved_amount'                   => Money::fromCents($savedCents),
+            'remaining_amount'               => Money::fromCents($remainingCents),
+            'overfunded_amount'              => Money::fromCents($overfundedCents),
+            'progress_percent'               => $progressPercent,
+            'progress_bar_percent'           => min(100, $progressPercent),
+            'status'                         => $goal->status,
+            'target_date'                    => $goal->target_date?->toDateString(),
+            'is_overdue'                     => $isOverdue,
+            'remaining_months'               => $remainingMonths,
+            'monthly_contribution_estimate' => $monthlyEstimate,
+            'notes'                          => $goal->notes,
+            'completed_at'                   => $goal->completed_at?->toIso8601String(),
+            'archived_at'                    => $goal->archived_at?->toIso8601String(),
+            'contribution_count'             => $goal->contributions()->count(),
+            'created_at'                     => $goal->created_at?->toIso8601String(),
+            'updated_at'                     => $goal->updated_at?->toIso8601String(),
         ];
 
         if ($withHistory) {
