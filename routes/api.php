@@ -62,13 +62,25 @@ Route::post('/login', function (Request $request) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
+    // Clear account-level and account+IP failed login rate limiters upon successful authentication.
+    // Broader IP-level abuse counter is intentionally not cleared so an attacker cannot reset it.
+    $normalizedEmail = Str::transliterate(Str::lower(trim((string) $request->input('email'))));
+    $ip = (string) $request->ip();
+    $accountIpKey = ($normalizedEmail !== '' ? $normalizedEmail : 'missing_email').'|'.$ip;
+    $accountKey = $normalizedEmail !== '' ? 'account:'.$normalizedEmail : 'missing_email:'.$ip;
+
+    RateLimiter::clear(md5('login'.$accountIpKey));
+    RateLimiter::clear(md5('login'.$accountKey));
+    RateLimiter::clear('login:'.$accountIpKey);
+    RateLimiter::clear('login:'.$accountKey);
+
     // Regenerate the session id to protect against session fixation.
     if ($request->hasSession()) {
         $request->session()->regenerate();
     }
 
     return response()->json(['user' => auth('web')->user()]);
-})->middleware('throttle:6,1');
+})->middleware('throttle:login');
 
 // Register endpoint
 Route::post('/register', function (Request $request) {
